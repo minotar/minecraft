@@ -3,7 +3,7 @@ package minecraft
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"net/http"
 )
@@ -20,7 +20,7 @@ type ProfileResponse struct {
 	}
 }
 
-func GetUser(username string) User {
+func GetUser(username string) (User, error) {
 	postBody := []byte(`{"agent":"Minecraft","name":"` + username + `"}`)
 	body := bytes.NewBuffer(postBody)
 
@@ -32,8 +32,12 @@ func GetUser(username string) User {
 
 	proResponse := ProfileResponse{}
 	if err := json.Unmarshal(response, &proResponse); err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
-	return proResponse.Profiles[0].User
+	if len(proResponse.Profiles) == 0 {
+		return User{}, errors.New("User not found.")
+	}
+
+	return proResponse.Profiles[0].User, nil
 }
