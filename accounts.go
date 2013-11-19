@@ -3,6 +3,7 @@ package minecraft
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -12,29 +13,27 @@ type User struct {
 	Name string
 }
 
-type ProfileResposne struct {
-	Size int
-	User struct {
-		Users []User
+type ProfileResponse struct {
+	Size     int
+	Profiles []struct {
+		User
 	}
 }
 
 func GetUser(username string) User {
-	fUser := &User{Name: username}
-	buf, _ := json.Marshal(fUser)
-	body := bytes.NewBuffer(buf)
+	postBody := []byte(`{"agent":"Minecraft","name":"` + username + `"}`)
+	body := bytes.NewBuffer(postBody)
 
-	resp, err := http.Post("https://api.mojang.com/profiles/page/1", "application/json", body)
-	if err != nil {
-		panic("POST failed")
+	r, httpErr := http.Post("https://api.mojang.com/profiles/page/1", "application/json", body)
+	if httpErr != nil {
+		panic(httpErr)
 	}
-	response, _ := ioutil.ReadAll(resp.Body)
+	response, _ := ioutil.ReadAll(r.Body)
 
-	proResponse := ProfileResposne{}
-	jsonErr := json.Unmarshal(response, &proResponse)
-	if jsonErr != nil {
-		panic("Invalid JSON response")
+	proResponse := ProfileResponse{}
+	if err := json.Unmarshal(response, &proResponse); err != nil {
+		fmt.Println(err)
 	}
 
-	return proResponse.User.Users[0]
+	return proResponse.Profiles[0].User
 }
