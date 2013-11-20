@@ -2,3 +2,7 @@
 package minecraft
 
 import ()
+
+const (
+	ValidUsernameRegex = `[a-zA-Z0-9_]+`
+)
