@@ -1,0 +1,47 @@
+package minecraft
+
+import (
+	"image"
+	_ "image/png"
+	"io"
+	"net/http"
+)
+
+type Skin struct {
+	Image image.Image
+}
+
+func GetSkin(u User) Skin {
+	username := u.Name
+
+	Skin, err := fetchFromUrl(awsUrl(username))
+	if err != nil {
+		panic(err)
+	}
+
+	return Skin
+}
+
+func fetchFromUrl(url string) (Skin, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return Skin{}, err
+	}
+	defer resp.Body.Close()
+
+	return decodeSkin(resp.Body)
+}
+
+func decodeSkin(r io.Reader) (Skin, error) {
+	skinImg, _, err := image.Decode(r)
+	if err != nil {
+		return Skin{}, err
+	}
+	return Skin{
+		Image: skinImg,
+	}, err
+}
+
+func awsUrl(username string) string {
+	return "http://s3.amazonaws.com/MinecraftSkins/" + username + ".png"
+}

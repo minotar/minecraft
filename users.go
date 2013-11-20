@@ -28,6 +28,8 @@ func GetUser(username string) (User, error) {
 	if httpErr != nil {
 		panic(httpErr)
 	}
+	defer r.Body.Close()
+
 	response, _ := ioutil.ReadAll(r.Body)
 
 	proResponse := ProfileResponse{}
