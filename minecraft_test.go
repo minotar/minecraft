@@ -6,7 +6,13 @@ import (
 	"testing"
 )
 
-func TestGetUser(t *testing.T) {
+func TestProfiles(t *testing.T) {
+
+	Convey("clone1018 should match d9135e082f2244c89cb0bee234155292", t, func() {
+		user, _ := GetUser("clone1018")
+
+		So(user.Id, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
+	})
 
 	Convey("CLone1018 should equal clone1018", t, func() {
 		user, _ := GetUser("CLone1018")
@@ -22,7 +28,7 @@ func TestGetUser(t *testing.T) {
 
 }
 
-func TestGetSkin(t *testing.T) {
+func TestAvatars(t *testing.T) {
 
 	Convey("clone1018 should return valid image", t, func() {
 		user := User{Name: "clone1018"}
