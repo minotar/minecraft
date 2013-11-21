@@ -11,15 +11,12 @@ type Skin struct {
 	Image image.Image
 }
 
-func GetSkin(u User) Skin {
+func GetSkin(u User) (Skin, error) {
 	username := u.Name
 
 	Skin, err := fetchFromUrl(awsUrl(username))
-	if err != nil {
-		panic(err)
-	}
 
-	return Skin
+	return Skin, err
 }
 
 func fetchFromUrl(url string) (Skin, error) {

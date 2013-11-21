@@ -33,7 +33,7 @@ func TestAvatars(t *testing.T) {
 	Convey("clone1018 should return valid image", t, func() {
 		user := User{Name: "clone1018"}
 
-		skin := GetSkin(user)
+		skin, _ := GetSkin(user)
 
 		So(skin, ShouldNotBeNil)
 	})
