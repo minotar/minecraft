@@ -6,9 +6,9 @@ package main
 import "github.com/minotar/minecraft"
 
 func main() {
-  user := minecraft.GetUser("clone1018")
+  user, _ := minecraft.GetUser("clone1018")
   
-  skin := minecraft.GetSkin(user)
+  skin, _ := minecraft.GetSkin(user)
 }
 ~~~
 
