@@ -1,6 +1,8 @@
+// Minecraft Avatars
 package minecraft
 
 import (
+	"errors"
 	"image"
 	_ "image/png"
 	"io"
@@ -21,8 +23,8 @@ func GetSkin(u User) (Skin, error) {
 
 func fetchFromUrl(url string) (Skin, error) {
 	resp, err := http.Get(url)
-	if err != nil {
-		return Skin{}, err
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return Skin{}, errors.New("Skin not found.")
 	}
 	defer resp.Body.Close()
 

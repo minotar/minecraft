@@ -38,4 +38,11 @@ func TestAvatars(t *testing.T) {
 		So(skin, ShouldNotBeNil)
 	})
 
+	Convey("Wooxye should err", t, func() {
+		user := User{Name: "Wooxye"}
+
+		_, err := GetSkin(user)
+		So(err.Error(), ShouldEqual, "Skin not found.")
+	})
+
 }

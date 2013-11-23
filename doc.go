@@ -1,6 +1,6 @@
-// minecraft project doc.go
+// Derp a herp
 
 /*
-minecraft document
+Minecraft Go API
 */
 package minecraft
