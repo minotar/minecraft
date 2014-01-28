@@ -13,7 +13,7 @@ func FetchSkinForChar() (Skin, error) {
 
 	steveImgBuf := bytes.NewBuffer(steveImgBytes)
 
-	return DecodeSkin(steveImgBuf)
+	return decodeSkin(steveImgBuf)
 }
 
 // The constant below contains Mojang AB copyrighted content.
