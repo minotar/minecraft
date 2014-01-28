@@ -27,18 +27,21 @@ func GetUser(username string) (User, error) {
 
 	r, httpErr := http.Post("https://api.mojang.com/profiles/page/1", "application/json", body)
 	if httpErr != nil {
-		log.Fatalln(httpErr)
+		log.Println(httpErr)
+		return User{Name: "char"}, nil
 	}
 	defer r.Body.Close()
 
 	response, readErr := ioutil.ReadAll(r.Body)
 	if readErr != nil {
-		log.Fatalln(readErr)
+		log.Println(readErr)
+		return User{Name: "char"}, nil
 	}
 
 	proResponse := ProfileResponse{}
 	if err := json.Unmarshal(response, &proResponse); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
+		return User{Name: "char"}, nil
 	}
 
 	if len(proResponse.Profiles) == 0 {
