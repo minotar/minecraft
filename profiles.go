@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -26,15 +27,18 @@ func GetUser(username string) (User, error) {
 
 	r, httpErr := http.Post("https://api.mojang.com/profiles/page/1", "application/json", body)
 	if httpErr != nil {
-		panic(httpErr)
+		log.Fatalln(httpErr)
 	}
 	defer r.Body.Close()
 
-	response, _ := ioutil.ReadAll(r.Body)
+	response, readErr := ioutil.ReadAll(r.Body)
+	if readErr != nil {
+		log.Fatalln(readErr)
+	}
 
 	proResponse := ProfileResponse{}
 	if err := json.Unmarshal(response, &proResponse); err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
 	if len(proResponse.Profiles) == 0 {
