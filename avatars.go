@@ -16,13 +16,13 @@ type Skin struct {
 func GetSkin(u User) (Skin, error) {
 	username := u.Name
 
-	Skin, err := fetchFromUrl(username)
+	Skin, err := FetchSkinFromUrl(username)
 
 	return Skin, err
 }
 
-func fetchFromUrl(username string) (Skin, error) {
-	url := "http://skins.minecraft.net/MinecraftSkins/"	
+func FetchSkinFromUrl(username string) (Skin, error) {
+	url := "http://skins.minecraft.net/MinecraftSkins/"
 	resp, err := http.Get(url + username + ".png")
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return Skin{}, errors.New("Skin not found.")
