@@ -42,7 +42,7 @@ func TestAvatars(t *testing.T) {
 		user := User{Name: "Wooxye"}
 
 		_, err := GetSkin(user)
-		So(err.Error(), ShouldEqual, "Skin not found.")
+		So(err.Error(), ShouldStartWith, "Skin not found.")
 	})
 
 }

@@ -3,6 +3,7 @@ package minecraft
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	_ "image/png"
 	"io"
@@ -25,7 +26,7 @@ func FetchSkinFromUrl(username string) (Skin, error) {
 	url := "http://skins.minecraft.net/MinecraftSkins/"
 	resp, err := http.Get(url + username + ".png")
 	if err != nil || resp.StatusCode != http.StatusOK {
-		return Skin{}, errors.New("Skin not found.")
+		return Skin{}, errors.New("Skin not found. (" + fmt.Sprintf("%v", resp.Header) + ")")
 	}
 	defer resp.Body.Close()
 
