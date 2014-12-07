@@ -33,7 +33,7 @@ func FetchSkinFromUrl(username string) (Skin, error) {
 	}
 	defer resp.Body.Close()
 
-	return decodeSkin(resp.Body)
+	return DecodeSkin(resp.Body)
 }
 
 func DecodeSkin(r io.Reader) (Skin, error) {
