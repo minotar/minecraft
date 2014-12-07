@@ -36,7 +36,7 @@ func FetchSkinFromUrl(username string) (Skin, error) {
 	return decodeSkin(resp.Body)
 }
 
-func decodeSkin(r io.Reader) (Skin, error) {
+func DecodeSkin(r io.Reader) (Skin, error) {
 	skinImg, _, err := image.Decode(r)
 	if err != nil {
 		return Skin{}, err
