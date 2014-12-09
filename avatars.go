@@ -6,14 +6,13 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
-	"image"
-	"image/png"
+	"github.com/gographics/imagick/imagick"
 	"io"
 	"net/http"
 )
 
 type Skin struct {
-	Image image.Image
+	Image *imagick.MagickWand
 	Hash  string
 }
 
@@ -37,18 +36,21 @@ func FetchSkinFromUrl(username string) (Skin, error) {
 }
 
 func DecodeSkin(r io.Reader) (Skin, error) {
-	skinImg, _, err := image.Decode(r)
+	skinImg := imagick.NewMagickWand()
+	skinImg.SetFormat("PNG")
+	// Read all the bytes out of the reader item
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r)
+	blob := buf.Bytes()
+
+	// And stick them in the skin
+	err := skinImg.ReadImageBlob(blob)
 	if err != nil {
 		return Skin{}, err
 	}
 
-	buf := new(bytes.Buffer)
-	encErr := png.Encode(buf, skinImg)
-	if encErr != nil {
-		return Skin{}, encErr
-	}
 	hasher := md5.New()
-	hasher.Write(buf.Bytes())
+	hasher.Write(blob)
 	skinHash := fmt.Sprintf("%x", hasher.Sum(nil))
 
 	return Skin{
