@@ -13,6 +13,8 @@ import (
 	"net/http"
 )
 
+const CharHash = "hash here"
+
 type Skin struct {
 	// Skin image...
 	Image image.Image
@@ -47,6 +49,10 @@ func FetchSkinFromMojang(username string) (Skin, error) {
 
 	skin, err := FetchSkinFromUrl(url, username)
 	skin.Source = "Mojang"
+
+	if skin.Hash == CharHash {
+		return Skin{}, errors.New("Rate limited")
+	}
 
 	return skin, err
 }
