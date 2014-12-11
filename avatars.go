@@ -73,7 +73,6 @@ func DecodeSkin(r io.Reader) (Skin, error) {
 	// Decode the skin we go
 	go func() {
 		var s image.Image
-		var out image.Image
 
 		skinImg, format, err := image.Decode(bytes.NewReader(buf))
 		if err != nil {
@@ -84,6 +83,7 @@ func DecodeSkin(r io.Reader) (Skin, error) {
 			format = ""
 		}
 		// Convert it to NRGBA if necessary
+		out := s
 		if format != "NRGBA" {
 			bounds := s.Bounds()
 			out = image.NewNRGBA(bounds)
