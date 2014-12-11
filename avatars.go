@@ -13,9 +13,14 @@ import (
 )
 
 type Skin struct {
-	Image  image.Image
-	Hash   string
+	// Skin image...
+	Image image.Image
+	// md5 hash of the skin image
+	Hash string
+	// Location we grabbed the skin from. Mojang/S3/Char
 	Source string
+	// 4-byte signature of the background matte for the skin
+	AlphaSig [4]uint8
 }
 
 func GetSkin(u User) (Skin, error) {
@@ -55,22 +60,38 @@ func FetchSkinFromS3(username string) (Skin, error) {
 }
 
 func DecodeSkin(r io.Reader) (Skin, error) {
+	// decode the image from the reader
 	skinImg, _, err := image.Decode(r)
 	if err != nil {
 		return Skin{}, err
 	}
 
+	// Pull that into a nice png
 	buf := new(bytes.Buffer)
 	encErr := png.Encode(buf, skinImg)
 	if encErr != nil {
 		return Skin{}, encErr
 	}
+
+	// Create an md5 sum
 	hasher := md5.New()
 	hasher.Write(buf.Bytes())
 	skinHash := fmt.Sprintf("%x", hasher.Sum(nil))
 
-	return Skin{
+	// Finally, establish the skin
+	skin := Skin{
 		Image: skinImg,
 		Hash:  skinHash,
-	}, err
+	}
+	// Create the alpha signature
+	img := skin.Image.(*image.NRGBA)
+	skin.AlphaSig = [...]uint8{
+		img.Pix[0],
+		img.Pix[1],
+		img.Pix[2],
+		img.Pix[3],
+	}
+
+	// And return the skin
+	return skin, nil
 }
