@@ -7,8 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"image/png"
+	"image/draw"
 	"io"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -61,27 +62,50 @@ func FetchSkinFromS3(username string) (Skin, error) {
 
 func DecodeSkin(r io.Reader) (Skin, error) {
 	// decode the image from the reader
-	skinImg, _, err := image.Decode(r)
+	buf, err := ioutil.ReadAll(r)
 	if err != nil {
 		return Skin{}, err
 	}
 
-	// Pull that into a nice png
-	buf := new(bytes.Buffer)
-	encErr := png.Encode(buf, skinImg)
-	if encErr != nil {
-		return Skin{}, encErr
-	}
+	hashBuf := make(chan string)
+	skinBuf := make(chan image.Image)
+
+	// Decode the skin we go
+	go func() {
+		var s image.Image
+		var out image.Image
+
+		skinImg, format, err := image.Decode(bytes.NewReader(buf))
+		if err != nil {
+			chr, _ := FetchImageForChar()
+			s = chr
+		} else {
+			s = skinImg
+			format = ""
+		}
+		// Convert it to NRGBA if necessary
+		if format != "NRGBA" {
+			bounds := s.Bounds()
+			out = image.NewNRGBA(bounds)
+			draw.Draw(out.(draw.Image), bounds, s, image.Pt(0, 0), draw.Src)
+		}
+
+		// Send it back down the channel
+		skinBuf <- out
+	}()
+
+	// And md5 hash it
+	go func() {
+		hasher := md5.New()
+		hasher.Write(buf)
+		hashBuf <- fmt.Sprintf("%x", hasher.Sum(nil))
+	}()
 
 	// Create an md5 sum
-	hasher := md5.New()
-	hasher.Write(buf.Bytes())
-	skinHash := fmt.Sprintf("%x", hasher.Sum(nil))
-
 	// Finally, establish the skin
 	skin := Skin{
-		Image: skinImg,
-		Hash:  skinHash,
+		Image: <-skinBuf,
+		Hash:  <-hashBuf,
 	}
 	// Create the alpha signature
 	img := skin.Image.(*image.NRGBA)
