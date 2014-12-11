@@ -31,10 +31,7 @@ func FetchSkinForChar() (Skin, error) {
 		return Skin{}, err
 	}
 
-	skin, err := DecodeSkin(bytes)
-	skin.Source = "Char"
-
-	return skin, err
+	return DecodeSkin(bytes)
 }
 
 // The constant below contains Mojang AB copyrighted content.
