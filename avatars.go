@@ -13,7 +13,7 @@ import (
 	"net/http"
 )
 
-const CharHash = "hash here"
+const CharHash = "613af1b0b41e4deae34e272f3487fba6"
 
 type Skin struct {
 	// Skin image...
