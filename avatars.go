@@ -2,18 +2,16 @@
 package minecraft
 
 import (
-	"bytes"
 	"crypto/md5"
 	"errors"
 	"fmt"
 	"image"
 	"image/draw"
 	"io"
-	"io/ioutil"
 	"net/http"
 )
 
-const CharHash = "613af1b0b41e4deae34e272f3487fba6"
+const CharHash = "be8949325ee28ed60d0f8adfc2b0c1fa"
 
 type Skin struct {
 	// Skin image...
@@ -67,51 +65,18 @@ func FetchSkinFromS3(username string) (Skin, error) {
 }
 
 func DecodeSkin(r io.Reader) (Skin, error) {
-	// decode the image from the reader
-	buf, err := ioutil.ReadAll(r)
-	if err != nil {
-		return Skin{}, err
-	}
+	skinImg := castToNRGBA(r)
 
-	hashBuf := make(chan string)
-	skinBuf := make(chan image.Image)
-
-	// Decode the skin we go
-	go func() {
-		var s image.Image
-
-		skinImg, format, err := image.Decode(bytes.NewReader(buf))
-		if err != nil {
-			chr, _ := FetchImageForChar()
-			s = chr
-		} else {
-			s = skinImg
-			format = ""
-		}
-		// Convert it to NRGBA if necessary
-		out := s
-		if format != "NRGBA" {
-			bounds := s.Bounds()
-			out = image.NewNRGBA(bounds)
-			draw.Draw(out.(draw.Image), bounds, s, image.Pt(0, 0), draw.Src)
-		}
-
-		// Send it back down the channel
-		skinBuf <- out
-	}()
-
-	// And md5 hash it
-	go func() {
-		hasher := md5.New()
-		hasher.Write(buf)
-		hashBuf <- fmt.Sprintf("%x", hasher.Sum(nil))
-	}()
+	// And md5 hash its pixels
+	hasher := md5.New()
+	hasher.Write(skinImg.(*image.NRGBA).Pix)
+	md5Hash := fmt.Sprintf("%x", hasher.Sum(nil))
 
 	// Create an md5 sum
 	// Finally, establish the skin
 	skin := Skin{
-		Image: <-skinBuf,
-		Hash:  <-hashBuf,
+		Image: skinImg,
+		Hash:  md5Hash,
 	}
 	// Create the alpha signature
 	img := skin.Image.(*image.NRGBA)
@@ -124,4 +89,26 @@ func DecodeSkin(r io.Reader) (Skin, error) {
 
 	// And return the skin
 	return skin, nil
+}
+
+func castToNRGBA(r io.Reader) image.Image {
+	// Decode the skin
+	var s image.Image
+	skinImg, format, err := image.Decode(r)
+	if err != nil {
+		chr, _ := FetchImageForChar()
+		s = chr
+	} else {
+		s = skinImg
+		format = ""
+	}
+	// Convert it to NRGBA if necessary
+	skinFinal := s
+	if format != "NRGBA" {
+		bounds := s.Bounds()
+		skinFinal = image.NewNRGBA(bounds)
+		draw.Draw(skinFinal.(draw.Image), bounds, s, image.Pt(0, 0), draw.Src)
+	}
+
+	return skinFinal
 }
