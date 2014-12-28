@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-const CharHash = "be8949325ee28ed60d0f8adfc2b0c1fa"
+const CharHash = "98903c1609352e11552dca79eb1ce3d6"
 
 type Skin struct {
 	// Skin image...
