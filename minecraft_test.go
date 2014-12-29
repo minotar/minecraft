@@ -45,4 +45,11 @@ func TestAvatars(t *testing.T) {
 		So(err.Error(), ShouldStartWith, "Skin not found.")
 	})
 
+	Convey("Char should return valid image", t, func() {
+		charImg, err := FetchImageForChar()
+
+		So(charImg, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+	})
+
 }
