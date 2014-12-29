@@ -34,10 +34,14 @@ func GetSkin(u User) (Skin, error) {
 
 func FetchSkinFromUrl(url, username string) (Skin, error) {
 	resp, err := http.Get(url + username + ".png")
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return Skin{}, errors.New("Skin not found. (" + fmt.Sprintf("%v", resp) + ")")
+	if err != nil {
+		return Skin{}, err
 	}
 	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return Skin{}, errors.New("Skin not found. (" + fmt.Sprintf("%v", resp) + ")")
+	}
 
 	return DecodeSkin(resp.Body)
 }
