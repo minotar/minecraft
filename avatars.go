@@ -47,6 +47,10 @@ func FetchSkinFromUrl(url, username string) (Skin, error) {
 }
 
 func FetchSkinFromMojang(username string) (Skin, error) {
+	if username == "char" {
+		return FetchSkinForChar()
+	}
+
 	url := "http://skins.minecraft.net/MinecraftSkins/"
 
 	skin, err := FetchSkinFromUrl(url, username)
