@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	_ "image/png"
 	"io"
 	"net/http"
 )
@@ -38,7 +39,7 @@ func FetchSkinFromUrl(url, username string) (Skin, error) {
 		return Skin{}, err
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return Skin{}, errors.New("Skin not found. (" + fmt.Sprintf("%v", resp) + ")")
 	}
