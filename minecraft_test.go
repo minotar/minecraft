@@ -4,6 +4,7 @@ package minecraft
 import (
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
+	"regexp"
 )
 
 func TestProfiles(t *testing.T) {
@@ -38,6 +39,13 @@ func TestAvatars(t *testing.T) {
 		So(skin, ShouldNotBeNil)
 	})
 
+	Convey("d9135e082f2244c89cb0bee234155292 should return valid image", t, func() {
+		skin, err := FetchSkinFromMojangByUuid("d9135e082f2244c89cb0bee234155292")
+
+		So(skin, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+	})
+
 	Convey("Wooxye should err", t, func() {
 		user := User{Name: "Wooxye"}
 
@@ -52,4 +60,70 @@ func TestAvatars(t *testing.T) {
 		So(err, ShouldBeNil)
 	})
 
+}
+
+func TestRegexs(t *testing.T) {
+	Convey("Regexs compile", t, func() {
+		var err error
+
+		_, err = regexp.Compile(ValidUsernameRegex)
+		So(err, ShouldBeNil)
+
+		_, err = regexp.Compile(ValidUuidRegex)
+		So(err, ShouldBeNil)
+
+		_, err = regexp.Compile(ValidUsernameOrUuidRegex)
+		So(err, ShouldBeNil)
+	})
+
+	Convey("Regexs work", t, func() {
+		invalidUsernames := []string{"d9135e082f2244c89cb0bee234155292", "_-proscope-_", "PeriScopeButTooLong"}
+		validUsernames := []string{"clone1018", "lukegb", "Wooxye"}
+
+		invalidUuids := []string{"clone1018"}
+		validUuids := []string{"d9135e082f2244c89cb0bee234155292"}
+
+		validUsernamesOrUuids := append(validUsernames, validUuids...)
+		possiblyInvalidUsernamesOrUuids := append(invalidUsernames, invalidUuids...)
+
+		usernameRegex := regexp.MustCompile("^" + ValidUsernameRegex + "$")
+		uuidRegex := regexp.MustCompile("^" + ValidUuidRegex + "$")
+		usernameOrUuidRegex := regexp.MustCompile("^" + ValidUsernameOrUuidRegex + "$")
+
+		Convey("Username regex works", func() {
+			for _, validUsername := range validUsernames {
+				So(usernameRegex.MatchString(validUsername), ShouldBeTrue)
+			}
+
+			for _, invalidUsername := range invalidUsernames {
+				So(usernameRegex.MatchString(invalidUsername), ShouldBeFalse)
+			}
+		})
+
+		Convey("UUID regex works", func() {
+
+			for _, validUuid := range validUuids {
+				So(uuidRegex.MatchString(validUuid), ShouldBeTrue)
+			}
+
+			for _, invalidUuid := range invalidUuids {
+				So(uuidRegex.MatchString(invalidUuid), ShouldBeFalse)
+			}
+		})
+
+		Convey("Username-or-UUID regex works", func() {
+
+			for _, validThing := range validUsernamesOrUuids {
+				So(usernameOrUuidRegex.MatchString(validThing), ShouldBeTrue)
+			}
+
+			for _, possiblyInvalidThing := range possiblyInvalidUsernamesOrUuids {
+				resultOne := usernameRegex.MatchString(possiblyInvalidThing)
+				resultTwo := uuidRegex.MatchString(possiblyInvalidThing)
+				expectedResult := resultOne || resultTwo
+
+				So(usernameOrUuidRegex.MatchString(possiblyInvalidThing), ShouldEqual, expectedResult)
+			}
+		})
+	})
 }
