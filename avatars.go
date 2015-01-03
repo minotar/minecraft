@@ -2,7 +2,10 @@
 package minecraft
 
 import (
+	"bytes"
 	"crypto/md5"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
@@ -25,12 +28,38 @@ type Skin struct {
 	AlphaSig [4]uint8
 }
 
+type MojangProfileResponse struct {
+	Uuid       string                  `json:"id"`
+	Username   string                  `json:"name"`
+	Properties []MojangProfileProperty `json:"properties"`
+}
+
+type MojangProfileProperty struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type MojangProfileTextureProperty struct {
+	TimestampMs uint64 `json:"timestamp"`
+	ProfileUuid string `json:"profileId"`
+	ProfileName string `json:"profileName"`
+	IsPublic    bool   `json:"isPublic"`
+	Textures    struct {
+		Skin struct {
+			Url string `json:"url"`
+		} `json:"SKIN"`
+		Cape struct {
+			Url string `json:"url"`
+		} `json:"CAPE"`
+	} `json:"textures"`
+}
+
 func GetSkin(u User) (Skin, error) {
 	username := u.Name
 
-	Skin, err := FetchSkinFromMojang(username)
+	skin, err := FetchSkinFromMojang(username)
 
-	return Skin, err
+	return skin, err
 }
 
 func FetchSkinFromUrl(url, username string) (Skin, error) {
@@ -67,6 +96,58 @@ func FetchSkinFromS3(username string) (Skin, error) {
 	skin.Source = "S3"
 
 	return skin, err
+}
+
+func FetchSkinFromMojangByUuid(uuid string) (Skin, error) {
+	url := "https://sessionserver.mojang.com/session/minecraft/profile/"
+	url += uuid
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return Skin{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNoContent {
+		return Skin{}, errors.New("Skin not found. (HTTP 204 No Content)")
+	} else if resp.StatusCode == 429 { // StatusTooManyRequests
+		return Skin{}, errors.New("Rate limited")
+	} else if resp.StatusCode != http.StatusOK {
+		return Skin{}, errors.New("Error retrieving profile. (HTTP " + resp.Status + ")")
+	}
+
+	mojangProfile := MojangProfileResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(&mojangProfile); err != nil {
+		return Skin{}, errors.New("Error decoding profile. (" + err.Error() + ")")
+	}
+
+	var texturesProperty *MojangProfileProperty
+	for _, v := range mojangProfile.Properties {
+		if v.Name == "textures" {
+			texturesProperty = &v
+			break
+		}
+	}
+	if texturesProperty == nil {
+		return Skin{}, errors.New("Profile " + uuid + " has no textures property?")
+	}
+
+	texturesSkin := MojangProfileTextureProperty{}
+	if err := json.NewDecoder(base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(texturesProperty.Value))).Decode(&texturesSkin); err != nil {
+		return Skin{}, errors.New("Error decoding texture property. (" + err.Error() + ")")
+	}
+
+	skinResp, err := http.Get(texturesSkin.Textures.Skin.Url)
+	if err != nil {
+		return Skin{}, errors.New("Error retrieving skin. " + err.Error())
+	}
+	defer skinResp.Body.Close()
+
+	if skinResp.StatusCode != http.StatusOK {
+		return Skin{}, errors.New("Error retrieving skin. (HTTP " + skinResp.Status + ")")
+	}
+
+	return DecodeSkin(skinResp.Body)
 }
 
 func DecodeSkin(r io.Reader) (Skin, error) {
