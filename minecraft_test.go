@@ -3,8 +3,8 @@ package minecraft
 
 import (
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 	"regexp"
+	"testing"
 )
 
 func TestProfiles(t *testing.T) {
@@ -80,8 +80,8 @@ func TestRegexs(t *testing.T) {
 		invalidUsernames := []string{"d9135e082f2244c89cb0bee234155292", "_-proscope-_", "PeriScopeButTooLong"}
 		validUsernames := []string{"clone1018", "lukegb", "Wooxye"}
 
-		invalidUuids := []string{"clone1018"}
-		validUuids := []string{"d9135e082f2244c89cb0bee234155292"}
+		invalidUuids := []string{"clone1018", "d9135e082f2244c8-9cb0-bee234155292"}
+		validUuids := []string{"d9135e082f2244c89cb0bee234155292", "d9135e08-2f22-44c8-9cb0-bee234155292"}
 
 		validUsernamesOrUuids := append(validUsernames, validUuids...)
 		possiblyInvalidUsernamesOrUuids := append(invalidUsernames, invalidUuids...)

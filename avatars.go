@@ -13,6 +13,7 @@ import (
 	_ "image/png"
 	"io"
 	"net/http"
+	"strings"
 )
 
 const CharHash = "98903c1609352e11552dca79eb1ce3d6"
@@ -99,6 +100,8 @@ func FetchSkinFromS3(username string) (Skin, error) {
 }
 
 func FetchSkinFromMojangByUuid(uuid string) (Skin, error) {
+	uuid = strings.Replace(uuid, "-", "", 4)
+
 	url := "https://sessionserver.mojang.com/session/minecraft/profile/"
 	url += uuid
 
