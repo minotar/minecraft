@@ -3,8 +3,8 @@ package minecraft
 
 import (
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 	"regexp"
+	"testing"
 )
 
 func TestProfiles(t *testing.T) {
