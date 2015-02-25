@@ -2,62 +2,132 @@
 package minecraft
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 	"regexp"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestProfiles(t *testing.T) {
 
 	Convey("clone1018 should match d9135e082f2244c89cb0bee234155292", t, func() {
-		user, _ := GetUser("clone1018")
+		uuid, err := GetUUID("clone1018")
 
-		So(user.Id, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
+		So(err, ShouldBeNil)
+		So(uuid, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
 	})
 
 	Convey("CLone1018 should equal clone1018", t, func() {
-		user, _ := GetUser("CLone1018")
+		apiProfile, err := GetAPIProfile("CLone1018")
 
-		So(user.Name, ShouldEqual, "clone1018")
+		So(err, ShouldBeNil)
+		So(apiProfile.Username, ShouldEqual, "clone1018")
 	})
 
 	Convey("skmkj88200aklk should gracefully error", t, func() {
-		_, err := GetUser("skmkj88200aklk")
+		apiProfile, err := GetAPIProfile("skmkj88200aklk")
 
-		So(err.Error(), ShouldEqual, "User not found.")
+		So(err.Error(), ShouldStartWith, "User not found.")
+		So(apiProfile, ShouldResemble, APIProfileResponse{})
+	})
+
+	Convey("bad_string/ should cause an HTTP error", t, func() {
+		sessionProfile, err := GetSessionProfile("bad_string/")
+
+		So(err.Error(), ShouldStartWith, "Error retrieving profile.")
+		So(sessionProfile, ShouldResemble, SessionProfileResponse{})
 	})
 
 }
 
-func TestAvatars(t *testing.T) {
+func TestTextures(t *testing.T) {
 
-	Convey("clone1018 should return valid image", t, func() {
-		user := User{Name: "clone1018"}
+	Convey("clone1018 texture should return the correct skin", t, func() {
+		skinTexture, err := fetchTexture("http://textures.minecraft.net/texture/cd9ca55e9862f003ebfa1872a9244ad5f721d6b9e6883dd1d42f87dae127649")
+		defer skinTexture.Close()
 
-		skin, _ := GetSkin(user)
-
-		So(skin, ShouldNotBeNil)
-	})
-
-	Convey("d9135e082f2244c89cb0bee234155292 should return valid image", t, func() {
-		skin, err := FetchSkinFromMojangByUuid("d9135e082f2244c89cb0bee234155292")
-
-		So(skin, ShouldNotBeNil)
 		So(err, ShouldBeNil)
+
+		skin, err := DecodeSkin(skinTexture)
+
+		So(err, ShouldBeNil)
+		So(skin.Hash, ShouldEqual, "a04a26d10218668a632e419ab073cf57")
 	})
 
-	Convey("Wooxye should err", t, func() {
-		user := User{Name: "Wooxye"}
+	Convey("Bad texture request should gracefully fail", t, func() {
+		skinTexture, err := fetchTexture("http://textures.minecraft.net/texture/")
+		defer skinTexture.Close()
 
-		_, err := GetSkin(user)
+		So(err.Error(), ShouldStartWith, "Error retrieving texture")
+
+		Convey("Bad texture decode should gracefully fail", func() {
+			skin, err := DecodeSkin(skinTexture)
+
+			So(err.Error(), ShouldContainSubstring, "image: unknown format")
+			So(skin, ShouldResemble, Skin{})
+		})
+
+	})
+
+}
+
+func TestTexturesSteve(t *testing.T) {
+
+	Convey("Steve should return valid image", t, func() {
+		steveImg, err := FetchImageForSteve()
+
+		So(err, ShouldBeNil)
+		So(steveImg, ShouldNotBeNil)
+	})
+
+	Convey("Steve should return valid image", t, func() {
+		steveSkin, err := FetchSkinForSteve()
+
+		So(err, ShouldBeNil)
+		So(steveSkin, ShouldNotResemble, Skin{})
+		So(steveSkin.Hash, ShouldEqual, "98903c1609352e11552dca79eb1ce3d6")
+	})
+
+}
+
+func TestTexturesSkin(t *testing.T) {
+
+	Convey("d9135e082f2244c89cb0bee234155292 should return valid image from Mojang", t, func() {
+		skin, err := FetchSkinFromMojangByUUID("d9135e082f2244c89cb0bee234155292")
+
+		So(err, ShouldBeNil)
+		So(skin, ShouldNotResemble, Skin{})
+		So(skin.Hash, ShouldEqual, "a04a26d10218668a632e419ab073cf57")
+	})
+
+	Convey("clone1018 should return valid image from Mojang", t, func() {
+		skin, err := FetchSkinFromMojang("clone1018")
+
+		So(err, ShouldBeNil)
+		So(skin, ShouldNotResemble, Skin{})
+		So(skin.Hash, ShouldEqual, "a04a26d10218668a632e419ab073cf57")
+	})
+
+	Convey("clone1018 should return valid image from S3", t, func() {
+		skin, err := FetchSkinFromS3("clone1018")
+
+		So(err, ShouldBeNil)
+		So(skin, ShouldNotResemble, Skin{})
+		So(skin.Hash, ShouldEqual, "a04a26d10218668a632e419ab073cf57")
+	})
+
+	Convey("Wooxye should err from Mojang", t, func() {
+		skin, err := FetchSkinFromMojang("Wooxye")
+
 		So(err.Error(), ShouldStartWith, "Skin not found.")
+		So(skin, ShouldResemble, Skin{Source: "Mojang"})
 	})
 
-	Convey("Char should return valid image", t, func() {
-		charImg, err := FetchImageForChar()
+	Convey("Wooxye should err from S3", t, func() {
+		skin, err := FetchSkinFromS3("Wooxye")
 
-		So(charImg, ShouldNotBeNil)
-		So(err, ShouldBeNil)
+		So(err.Error(), ShouldStartWith, "Skin not found.")
+		So(skin, ShouldResemble, Skin{Source: "S3"})
 	})
 
 }
