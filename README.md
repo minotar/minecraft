@@ -6,9 +6,9 @@ package main
 import "github.com/minotar/minecraft"
 
 func main() {
-  user, _ := minecraft.GetUser("clone1018")
-  
-  skin, _ := minecraft.GetSkin(user)
+  uuid, _ := minecraft.GetUUID("clone1018")
+
+  skin, _ := minecraft.FetchSkinFromMojangByUUID(uuid)
 }
 ~~~
 
@@ -24,4 +24,4 @@ go get github.com/minotar/minecraft
 
 
 ## License
-This is free and unencumbered software released into the public domain. 
+This is free and unencumbered software released into the public domain.
