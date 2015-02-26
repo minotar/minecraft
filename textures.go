@@ -36,7 +36,7 @@ func decodeTextureProperty(sessionProfile SessionProfileResponse) (SessionProfil
 	}
 
 	if texturesProperty == nil {
-		return SessionProfileTextureProperty{}, errors.New("No textures property")
+		return SessionProfileTextureProperty{}, errors.New("No textures property.")
 	}
 
 	profileTextureProperty := SessionProfileTextureProperty{}
@@ -58,12 +58,16 @@ func decodeTextureURL(uuid string, textureType string) (string, error) {
 
 	profileTextureProperty, err := decodeTextureProperty(sessionProfile)
 	if err != nil {
-		return "", errors.New("Error decoding texture property for \"" + uuid + "\" (" + err.Error() + ")")
+		return "", errors.New(err.Error() + " " + uuid)
 	}
 
 	textureURL := profileTextureProperty.Textures.Skin.URL
 	if textureType != "Skin" {
 		textureURL = profileTextureProperty.Textures.Cape.URL
+	}
+
+	if textureURL == "" {
+		return "", errors.New(textureType + " URL is not present. " + uuid)
 	}
 
 	return textureURL, nil

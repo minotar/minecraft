@@ -28,15 +28,15 @@ func FetchImageForSteve() (image.Image, error) {
 	return img, err
 }
 
-func FetchSkinForSteve() (Skin, error) {
+func FetchSkinForSteve() (*Skin, error) {
 	bytes, err := GetSteveBytes()
 	if err != nil {
-		return Skin{}, err
+		return &Skin{}, err
 	}
 
-	skin, err := DecodeSkin(bytes)
+	skin := &Skin{}
+	err = skin.decode(bytes)
 	skin.Source = "Char"
-
 	return skin, err
 }
 
