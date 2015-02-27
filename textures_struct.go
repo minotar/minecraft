@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"net/http"
 	// If we work with PNGs we need this
 	_ "image/png"
 	"io"
@@ -20,6 +21,26 @@ type Texture struct {
 	Source string
 	// 4-byte signature of the background matte for the texture
 	AlphaSig [4]uint8
+	// URL of the texture
+	URL string
+}
+
+func (t *Texture) fetch() error {
+	if t.URL == "" {
+		return errors.New("No Texture URL")
+	}
+
+	resp, err := http.Get(t.URL)
+	defer resp.Body.Close()
+	if err != nil {
+		return errors.New("Error retrieving texture. (" + err.Error() + ")")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("Error retrieving texture. (HTTP " + resp.Status + ")")
+	}
+
+	return t.decode(resp.Body)
 }
 
 // decode takes the image bytes and turns it into our Texture struct

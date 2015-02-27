@@ -2,9 +2,7 @@ package minecraft
 
 import (
 	"errors"
-	"fmt"
 	_ "image/png"
-	"net/http"
 )
 
 type Skin struct {
@@ -12,56 +10,45 @@ type Skin struct {
 }
 
 func FetchSkinFromMojang(username string) (*Skin, error) {
-	url := "http://skins.minecraft.net/MinecraftSkins/"
+	skin := &Skin{Texture{Source: "Mojang", URL: "http://skins.minecraft.net/MinecraftSkins/" + username + ".png"}}
 
-	skin, err := FetchSkinFromUrl(url, username)
-	skin.Source = "Mojang"
+	err := skin.fetch()
+	if err != nil {
+		if err.Error() == "Error retrieving texture. (HTTP 404 Not Found)" {
+			return skin, errors.New("Skin not found. " + err.Error())
+		}
+		return skin, err
+	}
 
 	if skin.Hash == SteveHash {
 		return &Skin{}, errors.New("Rate limited")
 	}
 
-	return skin, err
+	return skin, nil
 }
 
 func FetchSkinFromS3(username string) (*Skin, error) {
-	url := "http://s3.amazonaws.com/MinecraftSkins/"
+	skin := &Skin{Texture{Source: "S3", URL: "http://s3.amazonaws.com/MinecraftSkins/" + username + ".png"}}
 
-	skin, err := FetchSkinFromUrl(url, username)
-	skin.Source = "S3"
-
-	return skin, err
-}
-
-func FetchSkinFromUrl(url, username string) (*Skin, error) {
-	resp, err := http.Get(url + username + ".png")
+	err := skin.fetch()
 	if err != nil {
-		return &Skin{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return &Skin{}, errors.New("Skin not found. (" + fmt.Sprintf("%v", resp) + ")")
+		if err.Error() == "Error retrieving texture. (HTTP 403 Forbidden)" {
+			return skin, errors.New("Skin not found. " + err.Error())
+		}
+		return skin, err
 	}
 
-	skin := &Skin{}
-	err = skin.decode(resp.Body)
-	return skin, err
+	return skin, nil
 }
 
 func FetchSkinFromMojangByUUID(uuid string) (*Skin, error) {
-	skinTextureURL, err := decodeTextureURL(uuid, "Skin")
+	skin := &Skin{Texture{Source: "Mojang"}}
+
+	var err error
+	skin.URL, err = decodeTextureURLWrapper(uuid, "Skin")
 	if err != nil {
-		return &Skin{}, err
+		return skin, err
 	}
 
-	skinTexture, err := fetchTexture(skinTextureURL)
-	defer skinTexture.Close()
-	if err != nil {
-		return &Skin{}, err
-	}
-
-	skin := &Skin{}
-	err = skin.decode(skinTexture)
-	return skin, err
+	return skin, skin.fetch()
 }

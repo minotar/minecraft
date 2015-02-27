@@ -8,6 +8,73 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+func TestRegexs(t *testing.T) {
+
+	Convey("Regexs compile", t, func() {
+		var err error
+
+		_, err = regexp.Compile(ValidUsernameRegex)
+		So(err, ShouldBeNil)
+
+		_, err = regexp.Compile(ValidUuidRegex)
+		So(err, ShouldBeNil)
+
+		_, err = regexp.Compile(ValidUsernameOrUuidRegex)
+		So(err, ShouldBeNil)
+	})
+
+	Convey("Regexs work", t, func() {
+		invalidUsernames := []string{"d9135e082f2244c89cb0bee234155292", "_-proscope-_", "PeriScopeButTooLong"}
+		validUsernames := []string{"clone1018", "lukegb", "Wooxye"}
+
+		invalidUUIDs := []string{"clone1018", "d9135e082f2244c8-9cb0-bee234155292"}
+		validUUIDs := []string{"d9135e082f2244c89cb0bee234155292", "d9135e08-2f22-44c8-9cb0-bee234155292"}
+
+		validUsernamesOrUUIDs := append(validUsernames, validUUIDs...)
+		possiblyInvalidUsernamesOrUUIDs := append(invalidUsernames, invalidUUIDs...)
+
+		usernameRegex := regexp.MustCompile("^" + ValidUsernameRegex + "$")
+		uuidRegex := regexp.MustCompile("^" + ValidUuidRegex + "$")
+		usernameOrUUIDRegex := regexp.MustCompile("^" + ValidUsernameOrUuidRegex + "$")
+
+		Convey("Username regex works", func() {
+			for _, validUsername := range validUsernames {
+				So(usernameRegex.MatchString(validUsername), ShouldBeTrue)
+			}
+
+			for _, invalidUsername := range invalidUsernames {
+				So(usernameRegex.MatchString(invalidUsername), ShouldBeFalse)
+			}
+		})
+
+		Convey("UUID regex works", func() {
+			for _, validUUID := range validUUIDs {
+				So(uuidRegex.MatchString(validUUID), ShouldBeTrue)
+			}
+
+			for _, invalidUUID := range invalidUUIDs {
+				So(uuidRegex.MatchString(invalidUUID), ShouldBeFalse)
+			}
+		})
+
+		Convey("Username-or-UUID regex works", func() {
+			for _, validThing := range validUsernamesOrUUIDs {
+				So(usernameOrUUIDRegex.MatchString(validThing), ShouldBeTrue)
+			}
+
+			for _, possiblyInvalidThing := range possiblyInvalidUsernamesOrUUIDs {
+				resultOne := usernameRegex.MatchString(possiblyInvalidThing)
+				resultTwo := uuidRegex.MatchString(possiblyInvalidThing)
+				expectedResult := resultOne || resultTwo
+
+				So(usernameOrUUIDRegex.MatchString(possiblyInvalidThing), ShouldEqual, expectedResult)
+			}
+		})
+
+	})
+
+}
+
 func TestProfiles(t *testing.T) {
 
 	Convey("Test GetUUID", t, func() {
@@ -23,7 +90,7 @@ func TestProfiles(t *testing.T) {
 			uuid, err := GetUUID("skmkj88200aklk ")
 
 			So(err.Error(), ShouldStartWith, "User not found.")
-			So(uuid, ShouldEqual, "")
+			So(uuid, ShouldBeBlank)
 		})
 
 	})
@@ -66,6 +133,55 @@ func TestProfiles(t *testing.T) {
 
 	})
 
+	// Test a lot of what we did above, but this is a wrapper function that includes
+	// common logic for solving the issues of being supplied with UUID and
+	// Usernames and returning a uniform response (UUID of certain format)
+	Convey("Test NormalizePlayerForUUID", t, func() {
+
+		Convey("clone1018 should match d9135e082f2244c89cb0bee234155292", func() {
+			playerUUID, err := NormalizePlayerForUUID("clone1018")
+
+			So(err, ShouldBeNil)
+			So(playerUUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
+		})
+
+		Convey("CLone1018 should match d9135e082f2244c89cb0bee234155292", func() {
+			playerUUID, err := NormalizePlayerForUUID("clone1018")
+
+			So(err, ShouldBeNil)
+			So(playerUUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
+		})
+
+		Convey("d9135e08-2f22-44c8-9cb0-bee234155292 should match d9135e082f2244c89cb0bee234155292", func() {
+			playerUUID, err := NormalizePlayerForUUID("d9135e082f2244c89cb0bee234155292")
+
+			So(err, ShouldBeNil)
+			So(playerUUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
+		})
+
+		Convey("d9135e082f2244c89cb0bee234155292 should match d9135e082f2244c89cb0bee234155292", func() {
+			playerUUID, err := NormalizePlayerForUUID("d9135e082f2244c89cb0bee234155292")
+
+			So(err, ShouldBeNil)
+			So(playerUUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
+		})
+
+		Convey("skmkj88200aklk should gracefully error", func() {
+			playerUUID, err := NormalizePlayerForUUID("skmkj88200aklk")
+
+			So(err.Error(), ShouldStartWith, "User not found.")
+			So(playerUUID, ShouldBeBlank)
+		})
+
+		Convey("TooLongForAUsername should gracefully error", func() {
+			playerUUID, err := NormalizePlayerForUUID("TooLongForAUsername")
+
+			So(err.Error(), ShouldEqual, "Invalid Username or UUID.")
+			So(playerUUID, ShouldBeBlank)
+		})
+
+	})
+
 }
 
 func TestTextures(t *testing.T) {
@@ -93,7 +209,7 @@ func TestTextures(t *testing.T) {
 
 			So(err, ShouldBeNil)
 			So(profileTextureProperty.Textures.Skin.URL, ShouldEqual, "http://textures.minecraft.net/texture/e1c6c9b6de88f4188f9732909c76dfcd7b16a40a031ce1b4868e4d1f8898e4f")
-			So(profileTextureProperty.Textures.Cape.URL, ShouldEqual, "")
+			So(profileTextureProperty.Textures.Cape.URL, ShouldBeBlank)
 		})
 
 		Convey("Should only decode Cape URL", func() {
@@ -104,7 +220,7 @@ func TestTextures(t *testing.T) {
 			profileTextureProperty, err := decodeTextureProperty(sessionProfile)
 
 			So(err, ShouldBeNil)
-			So(profileTextureProperty.Textures.Skin.URL, ShouldEqual, "")
+			So(profileTextureProperty.Textures.Skin.URL, ShouldBeBlank)
 			So(profileTextureProperty.Textures.Cape.URL, ShouldEqual, "http://textures.minecraft.net/texture/c3af7fb821254664558f28361158ca73303c9a85e96e5251102958d7ed60c4a3")
 		})
 
@@ -113,7 +229,7 @@ func TestTextures(t *testing.T) {
 
 			profileTextureProperty, err := decodeTextureProperty(sessionProfile)
 
-			So(err.Error(), ShouldStartWith, "No textures property.")
+			So(err.Error(), ShouldEqual, "No textures property.")
 			So(profileTextureProperty, ShouldResemble, SessionProfileTextureProperty{})
 		})
 
@@ -130,11 +246,11 @@ func TestTextures(t *testing.T) {
 	})
 
 	// Must be careful to not request same profile from session server more than once per ~30 seconds
-	Convey("Test decodeTextureURL", t, func() {
+	Convey("Test decodeTextureURLWrapper", t, func() {
 
 		Convey("48a0a7e4d5594873a617dc189f76a8a1 should return a Skin texture URL", func() {
 			// citricsquid
-			capeTextureURL, err := decodeTextureURL("48a0a7e4d5594873a617dc189f76a8a1", "Skin")
+			capeTextureURL, err := decodeTextureURLWrapper("48a0a7e4d5594873a617dc189f76a8a1", "Skin")
 
 			So(err, ShouldBeNil)
 			So(capeTextureURL, ShouldEqual, "http://textures.minecraft.net/texture/e1c6c9b6de88f4188f9732909c76dfcd7b16a40a031ce1b4868e4d1f8898e4f")
@@ -142,7 +258,7 @@ func TestTextures(t *testing.T) {
 
 		Convey("069a79f444e94726a5befca90e38aaf5 should return a Cape texture URL", func() {
 			// Notch
-			capeTextureURL, err := decodeTextureURL("069a79f444e94726a5befca90e38aaf5", "Cape")
+			capeTextureURL, err := decodeTextureURLWrapper("069a79f444e94726a5befca90e38aaf5", "Cape")
 
 			So(err, ShouldBeNil)
 			So(capeTextureURL, ShouldEqual, "http://textures.minecraft.net/texture/3f688e0e699b3d9fe448b5bb50a3a288f9c589762b3dae8308842122dcb81")
@@ -150,10 +266,10 @@ func TestTextures(t *testing.T) {
 
 		Convey("Cape request for 2f3665cc5e29439bbd14cb6d3a6313a7 should gracefully error", func() {
 			// lukegb
-			capeTextureURL, err := decodeTextureURL("2f3665cc5e29439bbd14cb6d3a6313a7", "Cape")
+			capeTextureURL, err := decodeTextureURLWrapper("2f3665cc5e29439bbd14cb6d3a6313a7", "Cape")
 
-			So(err.Error(), ShouldStartWith, "Cape URL is not present.")
-			So(capeTextureURL, ShouldEqual, "")
+			So(err.Error(), ShouldEqual, "Cape URL is not present.")
+			So(capeTextureURL, ShouldBeBlank)
 		})
 
 	})
@@ -177,7 +293,7 @@ func TestTextures(t *testing.T) {
 			skinTexture, err := fetchTexture("http://textures.minecraft.net/texture/")
 			defer skinTexture.Close()
 
-			So(err.Error(), ShouldStartWith, "Error retrieving texture")
+			So(err.Error(), ShouldStartWith, "Error retrieving texture.")
 
 			Convey("Bad texture decode should gracefully fail", func() {
 				skin := &Skin{}
@@ -226,9 +342,9 @@ func TestTextures(t *testing.T) {
 			// samuel
 			skin, err := FetchCapeFromMojangByUUID("2aa9ff75db7140caa23189e693ad7d79")
 
-			So(err.Error(), ShouldStartWith, "Cape URL is not present.")
+			So(err.Error(), ShouldEqual, "Cape URL is not present.")
 			So(skin, ShouldResemble, &Cape{})
-			So(skin.Hash, ShouldEqual, "")
+			So(skin.Hash, ShouldBeBlank)
 		})
 
 	})
@@ -265,82 +381,16 @@ func TestTextures(t *testing.T) {
 			skin, err := FetchSkinFromMojang("Wooxye")
 
 			So(err.Error(), ShouldStartWith, "Skin not found.")
-			So(skin, ShouldResemble, &Skin{Texture{Source: "Mojang"}})
+			So(skin, ShouldResemble, &Skin{Texture{Source: "Mojang", URL: "http://skins.minecraft.net/MinecraftSkins/Wooxye.png"}})
 		})
 
 		Convey("Wooxye should err from S3", func() {
 			skin, err := FetchSkinFromS3("Wooxye")
 
 			So(err.Error(), ShouldStartWith, "Skin not found.")
-			So(skin, ShouldResemble, &Skin{Texture{Source: "S3"}})
+			So(skin, ShouldResemble, &Skin{Texture{Source: "S3", URL: "http://s3.amazonaws.com/MinecraftSkins/Wooxye.png"}})
 		})
 
 	})
 
-}
-
-func TestRegexs(t *testing.T) {
-	Convey("Regexs compile", t, func() {
-		var err error
-
-		_, err = regexp.Compile(ValidUsernameRegex)
-		So(err, ShouldBeNil)
-
-		_, err = regexp.Compile(ValidUuidRegex)
-		So(err, ShouldBeNil)
-
-		_, err = regexp.Compile(ValidUsernameOrUuidRegex)
-		So(err, ShouldBeNil)
-	})
-
-	Convey("Regexs work", t, func() {
-		invalidUsernames := []string{"d9135e082f2244c89cb0bee234155292", "_-proscope-_", "PeriScopeButTooLong"}
-		validUsernames := []string{"clone1018", "lukegb", "Wooxye"}
-
-		invalidUuids := []string{"clone1018"}
-		validUuids := []string{"d9135e082f2244c89cb0bee234155292"}
-
-		validUsernamesOrUuids := append(validUsernames, validUuids...)
-		possiblyInvalidUsernamesOrUuids := append(invalidUsernames, invalidUuids...)
-
-		usernameRegex := regexp.MustCompile("^" + ValidUsernameRegex + "$")
-		uuidRegex := regexp.MustCompile("^" + ValidUuidRegex + "$")
-		usernameOrUuidRegex := regexp.MustCompile("^" + ValidUsernameOrUuidRegex + "$")
-
-		Convey("Username regex works", func() {
-			for _, validUsername := range validUsernames {
-				So(usernameRegex.MatchString(validUsername), ShouldBeTrue)
-			}
-
-			for _, invalidUsername := range invalidUsernames {
-				So(usernameRegex.MatchString(invalidUsername), ShouldBeFalse)
-			}
-		})
-
-		Convey("UUID regex works", func() {
-
-			for _, validUuid := range validUuids {
-				So(uuidRegex.MatchString(validUuid), ShouldBeTrue)
-			}
-
-			for _, invalidUuid := range invalidUuids {
-				So(uuidRegex.MatchString(invalidUuid), ShouldBeFalse)
-			}
-		})
-
-		Convey("Username-or-UUID regex works", func() {
-
-			for _, validThing := range validUsernamesOrUuids {
-				So(usernameOrUuidRegex.MatchString(validThing), ShouldBeTrue)
-			}
-
-			for _, possiblyInvalidThing := range possiblyInvalidUsernamesOrUuids {
-				resultOne := usernameRegex.MatchString(possiblyInvalidThing)
-				resultTwo := uuidRegex.MatchString(possiblyInvalidThing)
-				expectedResult := resultOne || resultTwo
-
-				So(usernameOrUuidRegex.MatchString(possiblyInvalidThing), ShouldEqual, expectedResult)
-			}
-		})
-	})
 }

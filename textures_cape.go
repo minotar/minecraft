@@ -1,13 +1,22 @@
 package minecraft
 
-import _ "image/png"
+import (
+	"errors"
+	_ "image/png"
+)
 
 type Cape struct {
 	Texture
 }
 
+// FetchCape is a wrapper for the intelligence required to do things with UUIDs
+// or Usernames. We'll do our best and fallback where appropriate
+func FetchCape(user User) (*Cape, error) {
+	return &Cape{}, errors.New("")
+}
+
 func FetchCapeFromMojangByUUID(uuid string) (*Cape, error) {
-	capeTextureURL, err := decodeTextureURL(uuid, "Cape")
+	capeTextureURL, err := decodeTextureURLWrapper(uuid, "Cape")
 	if err != nil {
 		return &Cape{}, err
 	}

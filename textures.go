@@ -26,6 +26,38 @@ type SessionProfileTextureProperty struct {
 	} `json:"textures"`
 }
 
+// FetchTexture is our wrapper function to get both a Skin and Cape with a
+// single request to the Session Servers and return the User details
+func FetchTexture(player string) (*User, *Skin, *Cape, error) {
+	user := &User{}
+	skin := &Skin{}
+	cape := &Cape{}
+
+	uuid, err := NormalizePlayerForUUID(player)
+	if err != nil {
+		return &User{}, &Skin{}, &Cape{}, err
+	}
+
+	// Must be careful to not request same profile from session server more than once per ~30 seconds
+	sessionProfile, err := GetSessionProfile(uuid)
+	if err != nil {
+		return user, skin, cape, nil
+	}
+
+	user = &User{UUID: sessionProfile.UUID, Username: sessionProfile.Username}
+
+	profileTextureProperty, err := decodeTextureProperty(sessionProfile)
+	if err != nil {
+		return user, skin, cape, nil
+	}
+
+	skin.URL, err = decodeTextureURL(profileTextureProperty, "Skin")
+
+	cape.URL, err = decodeTextureURL(profileTextureProperty, "Cape")
+
+	return user, skin, cape, nil
+}
+
 func decodeTextureProperty(sessionProfile SessionProfileResponse) (SessionProfileTextureProperty, error) {
 	var texturesProperty *SessionProfileProperty
 	for _, v := range sessionProfile.Properties {
@@ -48,9 +80,24 @@ func decodeTextureProperty(sessionProfile SessionProfileResponse) (SessionProfil
 	return profileTextureProperty, nil
 }
 
-// decodeTextureURL will return a texture URL string when supplied with a UUID
+// decodeTextureURL will return a texture URL string when supplied with a
+// SessionProfileTextureProperty and a type (Skin|Cape).
+func decodeTextureURL(profileTextureProperty SessionProfileTextureProperty, textureType string) (string, error) {
+	textureURL := profileTextureProperty.Textures.Skin.URL
+	if textureType != "Skin" {
+		textureURL = profileTextureProperty.Textures.Cape.URL
+	}
+
+	if textureURL == "" {
+		return "", errors.New(textureType + " URL is not present.")
+	}
+
+	return textureURL, nil
+}
+
+// decodeTextureURLWrapper will return a texture URL string when supplied with a UUID
 // and a type (Skin|Cape).
-func decodeTextureURL(uuid string, textureType string) (string, error) {
+func decodeTextureURLWrapper(uuid string, textureType string) (string, error) {
 	sessionProfile, err := GetSessionProfile(uuid)
 	if err != nil {
 		return "", err
@@ -58,19 +105,10 @@ func decodeTextureURL(uuid string, textureType string) (string, error) {
 
 	profileTextureProperty, err := decodeTextureProperty(sessionProfile)
 	if err != nil {
-		return "", errors.New(err.Error() + " " + uuid)
+		return "", err
 	}
 
-	textureURL := profileTextureProperty.Textures.Skin.URL
-	if textureType != "Skin" {
-		textureURL = profileTextureProperty.Textures.Cape.URL
-	}
-
-	if textureURL == "" {
-		return "", errors.New(textureType + " URL is not present. " + uuid)
-	}
-
-	return textureURL, nil
+	return decodeTextureURL(profileTextureProperty, textureType)
 }
 
 // fetchTexture will return a Response.Body when supplied with texture URL.
@@ -78,11 +116,11 @@ func decodeTextureURL(uuid string, textureType string) (string, error) {
 func fetchTexture(textureURL string) (io.ReadCloser, error) {
 	resp, err := http.Get(textureURL)
 	if err != nil {
-		return resp.Body, errors.New("Error retrieving texture (" + err.Error() + ")")
+		return resp.Body, errors.New("Error retrieving texture. (" + err.Error() + ")")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return resp.Body, errors.New("Error retrieving texture (HTTP " + resp.Status + ")")
+		return resp.Body, errors.New("Error retrieving texture. (HTTP " + resp.Status + ")")
 	}
 
 	return resp.Body, nil

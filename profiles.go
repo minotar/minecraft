@@ -3,15 +3,19 @@ package minecraft
 import (
 	"encoding/json"
 	"errors"
-	"io"
-	"net/http"
+	"regexp"
+	"strings"
 )
 
-type APIProfileResponse struct {
+type User struct {
 	UUID     string `json:"id"`
 	Username string `json:"name"`
-	Legacy   bool   `json:"legacy"`
-	Demo     bool   `json:"demo"`
+}
+
+type APIProfileResponse struct {
+	User
+	Legacy bool `json:"legacy"`
+	Demo   bool `json:"demo"`
 }
 
 type SessionProfileResponse struct {
@@ -23,6 +27,21 @@ type SessionProfileResponse struct {
 type SessionProfileProperty struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+}
+
+// NormalizePlayerForUUID takes either a Username or UUID formatted with or
+// without hyphens and returns a uniform response (UUID)
+func NormalizePlayerForUUID(player string) (string, error) {
+	usernameRegex := regexp.MustCompile("^" + ValidUsernameRegex + "$")
+	uuidRegex := regexp.MustCompile("^" + ValidUuidRegex + "$")
+
+	if usernameRegex.MatchString(player) {
+		return GetUUID(player)
+	} else if uuidRegex.MatchString(player) == true {
+		return strings.Replace(player, "-", "", 4), nil
+	}
+
+	return "", errors.New("Invalid Username or UUID.")
 }
 
 // GetAPIProfile returns the API profile for a given username primarily of use
@@ -72,23 +91,4 @@ func GetSessionProfile(uuid string) (SessionProfileResponse, error) {
 	}
 
 	return sessionProfile, nil
-}
-
-// Mojang APIs have fairly standard responses and this makes those requests and
-// catches the errors. Remember to close the response!
-func apiRequest(url string) (io.ReadCloser, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode == http.StatusNoContent {
-		return resp.Body, errors.New("User not found. (HTTP 204 No Content)")
-	} else if resp.StatusCode == 429 { // StatusTooManyRequests
-		return resp.Body, errors.New("Rate limited")
-	} else if resp.StatusCode != http.StatusOK {
-		return resp.Body, errors.New("Error retrieving profile. (HTTP " + resp.Status + ")")
-	}
-
-	return resp.Body, nil
 }
