@@ -3,16 +3,33 @@ package minecraft
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"image"
 	_ "image/png"
 )
 
 const SteveHash = "98903c1609352e11552dca79eb1ce3d6"
 
+func (s *Skin) fetchSteve() error {
+	bytes, err := GetSteveBytes()
+	if err != nil {
+		return errors.New("fetchSteve failed: (" + err.Error() + ")")
+	}
+
+	s.Source = "Steve"
+
+	err = s.decode(bytes)
+	if err != nil {
+		return errors.New("fetchSteve failed: (" + err.Error() + ")")
+	}
+
+	return nil
+}
+
 func GetSteveBytes() (*bytes.Buffer, error) {
 	steveImgBytes, err := base64.StdEncoding.DecodeString(SteveBase64)
 	if err != nil {
-		return bytes.NewBuffer([]byte{}), err
+		return bytes.NewBuffer([]byte{}), errors.New("GetSteveBytes failed: (" + err.Error() + ")")
 	}
 
 	return bytes.NewBuffer(steveImgBytes), nil
@@ -21,23 +38,20 @@ func GetSteveBytes() (*bytes.Buffer, error) {
 func FetchImageForSteve() (image.Image, error) {
 	bytes, err := GetSteveBytes()
 	if err != nil {
-		return nil, err
+		return nil, errors.New("FetchImageForSteve failed: (" + err.Error() + ")")
 	}
 
 	img, _, err := image.Decode(bytes)
-	return img, err
+	if err != nil {
+		return nil, errors.New("FetchImageForSteve failed: (" + err.Error() + ")")
+	}
+	return img, nil
 }
 
 func FetchSkinForSteve() (*Skin, error) {
-	bytes, err := GetSteveBytes()
-	if err != nil {
-		return &Skin{}, err
-	}
-
 	skin := &Skin{}
-	err = skin.decode(bytes)
-	skin.Source = "Char"
-	return skin, err
+
+	return skin, skin.fetchSteve()
 }
 
 // The constant below contains Mojang AB copyrighted content.

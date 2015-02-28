@@ -41,7 +41,7 @@ func NormalizePlayerForUUID(player string) (string, error) {
 		return strings.Replace(player, "-", "", 4), nil
 	}
 
-	return "", errors.New("Invalid Username or UUID.")
+	return "", errors.New("NormalizePlayerForUUID failed: Invalid Username or UUID.")
 }
 
 // GetAPIProfile returns the API profile for a given username primarily of use
@@ -52,15 +52,17 @@ func GetAPIProfile(username string) (APIProfileResponse, error) {
 	url += username
 
 	apiBody, err := apiRequest(url)
-	defer apiBody.Close()
+	if apiBody != nil {
+		defer apiBody.Close()
+	}
 	if err != nil {
-		return APIProfileResponse{}, err
+		return APIProfileResponse{}, errors.New("GetAPIProfile failed: (" + err.Error() + ")")
 	}
 
 	apiProfile := APIProfileResponse{}
 	err = json.NewDecoder(apiBody).Decode(&apiProfile)
 	if err != nil {
-		return APIProfileResponse{}, errors.New("Error decoding profile. (" + err.Error() + ")")
+		return APIProfileResponse{}, errors.New("GetAPIProfile failed: Error decoding profile - (" + err.Error() + ")")
 	}
 
 	return apiProfile, nil
@@ -79,15 +81,17 @@ func GetSessionProfile(uuid string) (SessionProfileResponse, error) {
 	url += uuid
 
 	apiBody, err := apiRequest(url)
-	defer apiBody.Close()
+	if apiBody != nil {
+		defer apiBody.Close()
+	}
 	if err != nil {
-		return SessionProfileResponse{}, err
+		return SessionProfileResponse{}, errors.New("GetSessionProfile failed: (" + err.Error() + ")")
 	}
 
 	sessionProfile := SessionProfileResponse{}
 	err = json.NewDecoder(apiBody).Decode(&sessionProfile)
 	if err != nil {
-		return SessionProfileResponse{}, errors.New("Error decoding profile. (" + err.Error() + ")")
+		return SessionProfileResponse{}, errors.New("GetSessionProfile failed: Error decoding profile - (" + err.Error() + ")")
 	}
 
 	return sessionProfile, nil

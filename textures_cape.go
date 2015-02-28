@@ -1,33 +1,31 @@
 package minecraft
 
-import (
-	"errors"
-	_ "image/png"
-)
+import _ "image/png"
 
 type Cape struct {
 	Texture
 }
 
-// FetchCape is a wrapper for the intelligence required to do things with UUIDs
-// or Usernames. We'll do our best and fallback where appropriate
-func FetchCape(user User) (*Cape, error) {
-	return &Cape{}, errors.New("")
+func FetchCapeUUID(uuid string) (*Cape, error) {
+	cape := &Cape{}
+
+	// Must be careful to not request same profile from session server more than once per ~30 seconds
+	sessionProfile, err := GetSessionProfile(uuid)
+	if err != nil {
+		return cape, err
+	}
+
+	return cape, cape.fetchWithSessionProfile(sessionProfile, "Cape")
 }
 
-func FetchCapeFromMojangByUUID(uuid string) (*Cape, error) {
-	capeTextureURL, err := decodeTextureURLWrapper(uuid, "Cape")
-	if err != nil {
-		return &Cape{}, err
-	}
-
-	capeTexture, err := fetchTexture(capeTextureURL)
-	defer capeTexture.Close()
-	if err != nil {
-		return &Cape{}, err
-	}
-
+func FetchCapeUsernameMojang(username string) (*Cape, error) {
 	cape := &Cape{}
-	err = cape.decode(capeTexture)
-	return cape, err
+
+	return cape, cape.fetchWithUsernameMojang(username, "Cape")
+}
+
+func FetchCapeUsernameS3(username string) (*Cape, error) {
+	cape := &Cape{}
+
+	return cape, cape.fetchWithUsernameS3(username, "Cape")
 }

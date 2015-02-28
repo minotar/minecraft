@@ -23,15 +23,15 @@ const (
 func apiRequest(url string) (io.ReadCloser, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("apiRequest failed: Unable to Get URL - (" + err.Error() + ")")
 	}
 
 	if resp.StatusCode == http.StatusNoContent {
-		return resp.Body, errors.New("User not found. (HTTP 204 No Content)")
+		return resp.Body, errors.New("apiRequest failed: User not found - (HTTP 204 No Content)")
 	} else if resp.StatusCode == 429 { // StatusTooManyRequests
-		return resp.Body, errors.New("Rate limited")
+		return resp.Body, errors.New("apiRequest failed: Rate limited")
 	} else if resp.StatusCode != http.StatusOK {
-		return resp.Body, errors.New("Error retrieving profile. (HTTP " + resp.Status + ")")
+		return resp.Body, errors.New("apiRequest failed: Error retrieving profile - (HTTP " + resp.Status + ")")
 	}
 
 	return resp.Body, nil

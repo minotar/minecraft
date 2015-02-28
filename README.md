@@ -8,7 +8,7 @@ import "github.com/minotar/minecraft"
 func main() {
   uuid, _ := minecraft.GetUUID("clone1018")
 
-  skin, _ := minecraft.FetchSkinFromMojangByUUID(uuid)
+  skin, _ := minecraft.FetchSkinUUID(uuid)
 }
 ~~~
 
