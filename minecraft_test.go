@@ -2,67 +2,14 @@
 package minecraft
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 	"regexp"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestProfiles(t *testing.T) {
-
-	Convey("clone1018 should match d9135e082f2244c89cb0bee234155292", t, func() {
-		user, _ := GetUser("clone1018")
-
-		So(user.Id, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
-	})
-
-	Convey("CLone1018 should equal clone1018", t, func() {
-		user, _ := GetUser("CLone1018")
-
-		So(user.Name, ShouldEqual, "clone1018")
-	})
-
-	Convey("skmkj88200aklk should gracefully error", t, func() {
-		_, err := GetUser("skmkj88200aklk")
-
-		So(err.Error(), ShouldEqual, "User not found.")
-	})
-
-}
-
-func TestAvatars(t *testing.T) {
-
-	Convey("clone1018 should return valid image", t, func() {
-		user := User{Name: "clone1018"}
-
-		skin, _ := GetSkin(user)
-
-		So(skin, ShouldNotBeNil)
-	})
-
-	Convey("d9135e082f2244c89cb0bee234155292 should return valid image", t, func() {
-		skin, err := FetchSkinFromMojangByUuid("d9135e082f2244c89cb0bee234155292")
-
-		So(skin, ShouldNotBeNil)
-		So(err, ShouldBeNil)
-	})
-
-	Convey("Wooxye should err", t, func() {
-		user := User{Name: "Wooxye"}
-
-		_, err := GetSkin(user)
-		So(err.Error(), ShouldStartWith, "Skin not found.")
-	})
-
-	Convey("Char should return valid image", t, func() {
-		charImg, err := FetchImageForChar()
-
-		So(charImg, ShouldNotBeNil)
-		So(err, ShouldBeNil)
-	})
-
-}
-
 func TestRegexs(t *testing.T) {
+
 	Convey("Regexs compile", t, func() {
 		var err error
 
@@ -80,15 +27,15 @@ func TestRegexs(t *testing.T) {
 		invalidUsernames := []string{"d9135e082f2244c89cb0bee234155292", "_-proscope-_", "PeriScopeButTooLong"}
 		validUsernames := []string{"clone1018", "lukegb", "Wooxye"}
 
-		invalidUuids := []string{"clone1018"}
-		validUuids := []string{"d9135e082f2244c89cb0bee234155292"}
+		invalidUUIDs := []string{"clone1018", "d9135e082f2244c8-9cb0-bee234155292"}
+		validUUIDs := []string{"d9135e082f2244c89cb0bee234155292", "d9135e08-2f22-44c8-9cb0-bee234155292"}
 
-		validUsernamesOrUuids := append(validUsernames, validUuids...)
-		possiblyInvalidUsernamesOrUuids := append(invalidUsernames, invalidUuids...)
+		validUsernamesOrUUIDs := append(validUsernames, validUUIDs...)
+		possiblyInvalidUsernamesOrUUIDs := append(invalidUsernames, invalidUUIDs...)
 
 		usernameRegex := regexp.MustCompile("^" + ValidUsernameRegex + "$")
 		uuidRegex := regexp.MustCompile("^" + ValidUuidRegex + "$")
-		usernameOrUuidRegex := regexp.MustCompile("^" + ValidUsernameOrUuidRegex + "$")
+		usernameOrUUIDRegex := regexp.MustCompile("^" + ValidUsernameOrUuidRegex + "$")
 
 		Convey("Username regex works", func() {
 			for _, validUsername := range validUsernames {
@@ -101,29 +48,42 @@ func TestRegexs(t *testing.T) {
 		})
 
 		Convey("UUID regex works", func() {
-
-			for _, validUuid := range validUuids {
-				So(uuidRegex.MatchString(validUuid), ShouldBeTrue)
+			for _, validUUID := range validUUIDs {
+				So(uuidRegex.MatchString(validUUID), ShouldBeTrue)
 			}
 
-			for _, invalidUuid := range invalidUuids {
-				So(uuidRegex.MatchString(invalidUuid), ShouldBeFalse)
+			for _, invalidUUID := range invalidUUIDs {
+				So(uuidRegex.MatchString(invalidUUID), ShouldBeFalse)
 			}
 		})
 
 		Convey("Username-or-UUID regex works", func() {
-
-			for _, validThing := range validUsernamesOrUuids {
-				So(usernameOrUuidRegex.MatchString(validThing), ShouldBeTrue)
+			for _, validThing := range validUsernamesOrUUIDs {
+				So(usernameOrUUIDRegex.MatchString(validThing), ShouldBeTrue)
 			}
 
-			for _, possiblyInvalidThing := range possiblyInvalidUsernamesOrUuids {
+			for _, possiblyInvalidThing := range possiblyInvalidUsernamesOrUUIDs {
 				resultOne := usernameRegex.MatchString(possiblyInvalidThing)
 				resultTwo := uuidRegex.MatchString(possiblyInvalidThing)
 				expectedResult := resultOne || resultTwo
 
-				So(usernameOrUuidRegex.MatchString(possiblyInvalidThing), ShouldEqual, expectedResult)
+				So(usernameOrUUIDRegex.MatchString(possiblyInvalidThing), ShouldEqual, expectedResult)
 			}
 		})
+
+	})
+
+}
+
+func TestExtra(t *testing.T) {
+
+	Convey("Test apiRequest", t, func() {
+
+		Convey("Not a URL", func() {
+			_, err := apiRequest("//")
+
+			So(err.Error(), ShouldContainSubstring, "Unable to Get URL")
+		})
+
 	})
 }
