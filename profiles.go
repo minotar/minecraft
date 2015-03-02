@@ -3,7 +3,6 @@ package minecraft
 import (
 	"encoding/json"
 	"errors"
-	"regexp"
 	"strings"
 )
 
@@ -29,18 +28,16 @@ type SessionProfileProperty struct {
 	Value string `json:"value"`
 }
 
-// NormalizePlayerForUUID takes either a Username or UUID formatted with or
-// without hyphens and returns a uniform response (UUID)
+// NormalizePlayerForUUID takes either a Username or UUID and returns a UUID
+// formatted without UUID or an error (no account or API error)
 func NormalizePlayerForUUID(player string) (string, error) {
-	usernameRegex := regexp.MustCompile("^" + ValidUsernameRegex + "$")
-	uuidRegex := regexp.MustCompile("^" + ValidUuidRegex + "$")
-
-	if usernameRegex.MatchString(player) {
+	if IsUsername(player) {
 		return GetUUID(player)
-	} else if uuidRegex.MatchString(player) == true {
+	} else if IsUUID(player) {
 		return strings.Replace(player, "-", "", 4), nil
 	}
 
+	// We shouldn't get this far as there should have been Regex checks already.
 	return "", errors.New("NormalizePlayerForUUID failed: Invalid Username or UUID.")
 }
 

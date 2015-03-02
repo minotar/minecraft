@@ -26,51 +26,61 @@ type Texture struct {
 	URL string
 }
 
-func (t *Texture) fetch() error {
+func (t *Texture) Fetch() error {
 	if t.URL == "" {
-		return errors.New("fetch failed: No Texture URL")
+		return errors.New("Fetch failed: No Texture URL")
 	}
 
 	resp, err := http.Get(t.URL)
 	if err != nil {
-		return errors.New("fetch failed: Unable to Get URL - (" + err.Error() + ")")
+		return errors.New("Fetch failed: Unable to Get URL - (" + err.Error() + ")")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New("fetch failed: Error retrieving texture - (HTTP " + resp.Status + ")")
+		return errors.New("Fetch failed: Error retrieving texture - (HTTP " + resp.Status + ")")
 	}
 
-	err = t.decode(resp.Body)
+	err = t.Decode(resp.Body)
 	if err != nil {
-		return errors.New("fetch failed: (" + err.Error() + ")")
+		return errors.New("Fetch failed: (" + err.Error() + ")")
 	}
 	return nil
 }
 
-func (t *Texture) fetchWithSessionProfile(sessionProfile SessionProfileResponse, textureType string) error {
-	profileTextureProperty, err := decodeTextureProperty(sessionProfile)
+func (t *Texture) FetchWithSessionProfile(sessionProfile SessionProfileResponse, textureType string) error {
+	profileTextureProperty, err := DecodeTextureProperty(sessionProfile)
 	if err != nil {
-		return errors.New("fetchWithSessionProfile failed: (" + err.Error() + ")")
+		return errors.New("FetchWithSessionProfile failed: (" + err.Error() + ")")
 	}
 
 	t.Source = "SessionProfile"
 
-	url, err := decodeTextureURL(profileTextureProperty, textureType)
+	err = t.FetchWithTextureProperty(profileTextureProperty, textureType)
 	if err != nil {
-		return errors.New("fetchWithSessionProfile failed: (" + err.Error() + ")")
+		return errors.New("FetchWithSessionProfile failed: (" + err.Error() + ")")
+	}
+	return nil
+}
+
+func (t *Texture) FetchWithTextureProperty(profileTextureProperty SessionProfileTextureProperty, textureType string) error {
+	t.Source = "SessionProfile"
+
+	url, err := DecodeTextureURL(profileTextureProperty, textureType)
+	if err != nil {
+		return errors.New("FetchWithTextureProperty failed: (" + err.Error() + ")")
 	}
 	t.URL = url
 
-	err = t.fetch()
+	err = t.Fetch()
 	if err != nil {
-		return errors.New("fetchWithSessionProfile failed: (" + err.Error() + ")")
+		return errors.New("FetchWithTextureProperty failed: (" + err.Error() + ")")
 	}
 	return nil
 }
 
 // Includes the Skin not found detection that Mojang uses
-func (t *Texture) fetchWithUsernameMojang(username string, textureType string) error {
+func (t *Texture) FetchWithUsernameMojang(username string, textureType string) error {
 	t.URL = "http://skins.minecraft.net/MinecraftSkins/" + username + ".png"
 	if textureType != "Skin" {
 		t.URL = "http://skins.minecraft.net/MinecraftCloaks/" + username + ".png"
@@ -78,19 +88,19 @@ func (t *Texture) fetchWithUsernameMojang(username string, textureType string) e
 
 	t.Source = "Mojang"
 
-	err := t.fetch()
+	err := t.Fetch()
 	if err != nil {
-		if err.Error() == "fetch failed: Error retrieving texture - (HTTP 404 Not Found)" {
-			return errors.New("fetchWithUsernameMojang failed:  Texture not found - (" + err.Error() + ")")
+		if err.Error() == "Fetch failed: Error retrieving texture - (HTTP 404 Not Found)" {
+			return errors.New("FetchWithUsernameMojang failed:  Texture not found - (" + err.Error() + ")")
 		}
-		return errors.New("fetchWithUsernameMojang failed:  (" + err.Error() + ")")
+		return errors.New("FetchWithUsernameMojang failed:  (" + err.Error() + ")")
 	}
 
 	return nil
 }
 
 // Includes the Skin not found detection that S3 uses
-func (t *Texture) fetchWithUsernameS3(username string, textureType string) error {
+func (t *Texture) FetchWithUsernameS3(username string, textureType string) error {
 	t.URL = "http://s3.amazonaws.com/MinecraftSkins/" + username + ".png"
 	if textureType != "Skin" {
 		t.URL = "http://s3.amazonaws.com/MinecraftCloaks/" + username + ".png"
@@ -98,22 +108,22 @@ func (t *Texture) fetchWithUsernameS3(username string, textureType string) error
 
 	t.Source = "S3"
 
-	err := t.fetch()
+	err := t.Fetch()
 	if err != nil {
-		if err.Error() == "fetch failed: Error retrieving texture - (HTTP 403 Forbidden)" {
-			return errors.New("fetchWithUsernameS3 failed: Texture not found - (" + err.Error() + ")")
+		if err.Error() == "Fetch failed: Error retrieving texture - (HTTP 403 Forbidden)" {
+			return errors.New("FetchWithUsernameS3 failed: Texture not found - (" + err.Error() + ")")
 		}
-		return errors.New("fetchWithUsernameS3 failed:  (" + err.Error() + ")")
+		return errors.New("FetchWithUsernameS3 failed:  (" + err.Error() + ")")
 	}
 
 	return nil
 }
 
 // decode takes the image bytes and turns it into our Texture struct
-func (t *Texture) decode(r io.Reader) error {
-	err := t.castToNRGBA(r)
+func (t *Texture) Decode(r io.Reader) error {
+	err := t.CastToNRGBA(r)
 	if err != nil {
-		return errors.New("decode failed: Error casting to NRGBA - (" + err.Error() + ")")
+		return errors.New("Decode failed: Error casting to NRGBA - (" + err.Error() + ")")
 	}
 
 	// And md5 hash its pixels
@@ -133,11 +143,11 @@ func (t *Texture) decode(r io.Reader) error {
 	return nil
 }
 
-func (t *Texture) castToNRGBA(r io.Reader) error {
+func (t *Texture) CastToNRGBA(r io.Reader) error {
 	// Decode the skin
 	textureImg, format, err := image.Decode(r)
 	if err != nil {
-		return errors.New("castToNRGBA failed: (" + err.Error() + ")")
+		return errors.New("CastToNRGBA failed: (" + err.Error() + ")")
 	}
 
 	// Convert it to NRGBA if necessary

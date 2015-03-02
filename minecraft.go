@@ -5,18 +5,37 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"regexp"
 )
 
 const (
-	// Proper Minecraft username regex
+	// ValidUsernameRegex is proper Minecraft username regex
 	ValidUsernameRegex = `[a-zA-Z0-9_]{1,16}`
 
-	// Proper Minecraft UUID regex
-	ValidUuidRegex = `[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
+	// ValidUUIDRegex is proper Minecraft UUID regex
+	ValidUUIDRegex = `[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
 
-	// Minecraft username-or-UUID regex
-	ValidUsernameOrUuidRegex = "(" + ValidUuidRegex + "|" + ValidUsernameRegex + ")"
+	// ValidUsernameOrUUIDRegex is proper Minecraft Username-or-UUID regex
+	ValidUsernameOrUUIDRegex = "(" + ValidUUIDRegex + "|" + ValidUsernameRegex + ")"
 )
+
+func IsUsername(player string) bool {
+	regexUsername := regexp.MustCompile("^" + ValidUsernameRegex + "$")
+
+	return regexUsername.MatchString(player)
+}
+
+func IsUUID(player string) bool {
+	regexUUID := regexp.MustCompile("^" + ValidUUIDRegex + "$")
+
+	return regexUUID.MatchString(player)
+}
+
+func IsUsernameOrUUID(player string) bool {
+	regexUsernameOrUUID := regexp.MustCompile("^" + ValidUsernameOrUUIDRegex + "$")
+
+	return regexUsernameOrUUID.MatchString(player)
+}
 
 // Mojang APIs have fairly standard responses and this makes those requests and
 // catches the errors. Remember to close the response!

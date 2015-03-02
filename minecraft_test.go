@@ -13,13 +13,13 @@ func TestRegexs(t *testing.T) {
 	Convey("Regexs compile", t, func() {
 		var err error
 
-		_, err = regexp.Compile(ValidUsernameRegex)
+		_, err = regexp.Compile("^" + ValidUsernameRegex + "$")
 		So(err, ShouldBeNil)
 
-		_, err = regexp.Compile(ValidUuidRegex)
+		_, err = regexp.Compile("^" + ValidUUIDRegex + "$")
 		So(err, ShouldBeNil)
 
-		_, err = regexp.Compile(ValidUsernameOrUuidRegex)
+		_, err = regexp.Compile("^" + ValidUsernameOrUUIDRegex + "$")
 		So(err, ShouldBeNil)
 	})
 
@@ -33,41 +33,37 @@ func TestRegexs(t *testing.T) {
 		validUsernamesOrUUIDs := append(validUsernames, validUUIDs...)
 		possiblyInvalidUsernamesOrUUIDs := append(invalidUsernames, invalidUUIDs...)
 
-		usernameRegex := regexp.MustCompile("^" + ValidUsernameRegex + "$")
-		uuidRegex := regexp.MustCompile("^" + ValidUuidRegex + "$")
-		usernameOrUUIDRegex := regexp.MustCompile("^" + ValidUsernameOrUuidRegex + "$")
-
 		Convey("Username regex works", func() {
 			for _, validUsername := range validUsernames {
-				So(usernameRegex.MatchString(validUsername), ShouldBeTrue)
+				So(IsUsername(validUsername), ShouldBeTrue)
 			}
 
 			for _, invalidUsername := range invalidUsernames {
-				So(usernameRegex.MatchString(invalidUsername), ShouldBeFalse)
+				So(IsUsername(invalidUsername), ShouldBeFalse)
 			}
 		})
 
 		Convey("UUID regex works", func() {
 			for _, validUUID := range validUUIDs {
-				So(uuidRegex.MatchString(validUUID), ShouldBeTrue)
+				So(IsUUID(validUUID), ShouldBeTrue)
 			}
 
 			for _, invalidUUID := range invalidUUIDs {
-				So(uuidRegex.MatchString(invalidUUID), ShouldBeFalse)
+				So(IsUUID(invalidUUID), ShouldBeFalse)
 			}
 		})
 
 		Convey("Username-or-UUID regex works", func() {
 			for _, validThing := range validUsernamesOrUUIDs {
-				So(usernameOrUUIDRegex.MatchString(validThing), ShouldBeTrue)
+				So(IsUsernameOrUUID(validThing), ShouldBeTrue)
 			}
 
 			for _, possiblyInvalidThing := range possiblyInvalidUsernamesOrUUIDs {
-				resultOne := usernameRegex.MatchString(possiblyInvalidThing)
-				resultTwo := uuidRegex.MatchString(possiblyInvalidThing)
+				resultOne := IsUsername(possiblyInvalidThing)
+				resultTwo := IsUUID(possiblyInvalidThing)
 				expectedResult := resultOne || resultTwo
 
-				So(usernameOrUUIDRegex.MatchString(possiblyInvalidThing), ShouldEqual, expectedResult)
+				So(IsUsernameOrUUID(possiblyInvalidThing), ShouldEqual, expectedResult)
 			}
 		})
 
@@ -82,6 +78,7 @@ func TestExtra(t *testing.T) {
 		Convey("Not a URL", func() {
 			_, err := apiRequest("//")
 
+			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "Unable to Get URL")
 		})
 

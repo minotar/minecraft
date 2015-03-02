@@ -10,7 +10,7 @@ import (
 
 const SteveHash = "98903c1609352e11552dca79eb1ce3d6"
 
-func (s *Skin) fetchSteve() error {
+func (s *Skin) FetchSteve() error {
 	bytes, err := GetSteveBytes()
 	if err != nil {
 		return errors.New("fetchSteve failed: (" + err.Error() + ")")
@@ -18,7 +18,7 @@ func (s *Skin) fetchSteve() error {
 
 	s.Source = "Steve"
 
-	err = s.decode(bytes)
+	err = s.Decode(bytes)
 	if err != nil {
 		return errors.New("fetchSteve failed: (" + err.Error() + ")")
 	}
@@ -48,10 +48,10 @@ func FetchImageForSteve() (image.Image, error) {
 	return img, nil
 }
 
-func FetchSkinForSteve() (*Skin, error) {
+func FetchSkinForSteve() (Skin, error) {
 	skin := &Skin{}
 
-	return skin, skin.fetchSteve()
+	return *skin, skin.FetchSteve()
 }
 
 // The constant below contains Mojang AB copyrighted content.
