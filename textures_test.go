@@ -374,7 +374,7 @@ func TestTextures(t *testing.T) {
 			user, skin, cape, err := FetchTextures("MalformedSTex")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "FetchTextures fallback to Steve: (FetchTexturesWithSessionProfile failed: Unable to retrieve skin - (FetchWithTextureProperty failed: (Fetch failed: (Decode failed: Error casting to NRGBA - (CastToNRGBA failed: (unexpected EOF))))))")
+			So(err.Error(), ShouldStartWith, "FetchTextures fallback to Steve: (FetchTexturesWithSessionProfile failed: Unable to retrieve skin - (FetchWithTextureProperty failed: (Fetch failed: (Decode failed: Error casting to NRGBA - (CastToNRGBA failed:")
 			So(user.UUID, ShouldEqual, "00000000000000000000000000000008")
 			So(cape, ShouldResemble, Cape{})
 			So(skin.Source, ShouldEqual, "Steve")
@@ -385,7 +385,7 @@ func TestTextures(t *testing.T) {
 			user, skin, cape, err := FetchTextures("MalformedCTex")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "FetchTextures unable to get the cape: (FetchTexturesWithSessionProfile failed: Unable to retrieve cape - (FetchWithTextureProperty failed: (Fetch failed: (Decode failed: Error casting to NRGBA - (CastToNRGBA failed: (unexpected EOF))))))")
+			So(err.Error(), ShouldStartWith, "FetchTextures unable to get the cape: (FetchTexturesWithSessionProfile failed: Unable to retrieve cape - (FetchWithTextureProperty failed: (Fetch failed: (Decode failed: Error casting to NRGBA - (CastToNRGBA failed:")
 			So(user.UUID, ShouldEqual, "00000000000000000000000000000009")
 			So(cape, ShouldResemble, Cape{Texture{Source: "SessionProfile", URL: "http://textures.minecraft.net/texture/MalformedTexture"}})
 			So(skin.Source, ShouldEqual, "SessionProfile")
