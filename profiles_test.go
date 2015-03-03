@@ -29,6 +29,7 @@ func TestProfiles(t *testing.T) {
 		Convey("skmkj88200aklk should gracefully error", func() {
 			apiProfile, err := GetAPIProfile("skmkj88200aklk")
 
+			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "User not found")
 			So(apiProfile, ShouldResemble, APIProfileResponse{})
 		})
@@ -36,6 +37,7 @@ func TestProfiles(t *testing.T) {
 		Convey("bad_string/ should cause an HTTP error", func() {
 			apiProfile, err := GetAPIProfile("bad_string/")
 
+			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "Error retrieving profile")
 			So(apiProfile, ShouldResemble, APIProfileResponse{})
 		})
@@ -56,6 +58,7 @@ func TestProfiles(t *testing.T) {
 		Convey("bad_string/ should cause an HTTP error", func() {
 			sessionProfile, err := GetSessionProfile("bad_string/")
 
+			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "Error retrieving profile")
 			So(sessionProfile, ShouldResemble, SessionProfileResponse{})
 		})
@@ -98,6 +101,7 @@ func TestProfiles(t *testing.T) {
 		Convey("skmkj88200aklk should gracefully error", func() {
 			playerUUID, err := NormalizePlayerForUUID("skmkj88200aklk")
 
+			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "User not found")
 			So(playerUUID, ShouldBeBlank)
 		})
@@ -105,8 +109,55 @@ func TestProfiles(t *testing.T) {
 		Convey("TooLongForAUsername should gracefully error", func() {
 			playerUUID, err := NormalizePlayerForUUID("TooLongForAUsername")
 
+			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "Invalid Username or UUID.")
 			So(playerUUID, ShouldBeBlank)
+		})
+
+	})
+
+	Convey("Test Profile Rate Limit detection", t, func() {
+
+		testServer := startTestServer(returnMux())
+		defer closeTestServer(testServer)
+
+		Convey("GetAPIProfile should detect Rate Limit", func() {
+			apiProfile, err := GetAPIProfile("RateLimitAPI")
+
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "Rate limited")
+			So(apiProfile, ShouldResemble, APIProfileResponse{})
+		})
+
+		Convey("GetSessionProfile should detect Rate Limit", func() {
+			sessionProfile, err := GetSessionProfile("00000000000000000000000000000001")
+
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "Rate limited")
+			So(sessionProfile, ShouldResemble, SessionProfileResponse{})
+		})
+
+	})
+
+	Convey("Test Profile Bad JSON", t, func() {
+
+		testServer := startTestServer(returnMux())
+		defer closeTestServer(testServer)
+
+		Convey("GetAPIProfile should error decoding", func() {
+			apiProfile, err := GetAPIProfile("MalformedAPI")
+
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "Error decoding profile")
+			So(apiProfile, ShouldResemble, APIProfileResponse{})
+		})
+
+		Convey("GetSessionProfile should error decoding", func() {
+			sessionProfile, err := GetSessionProfile("00000000000000000000000000000003")
+
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "Error decoding profile")
+			So(sessionProfile, ShouldResemble, SessionProfileResponse{})
 		})
 
 	})
