@@ -30,7 +30,7 @@ func TestProfiles(t *testing.T) {
 			apiProfile, err := GetAPIProfile("skmkj88200aklk")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "User not found")
+			So(err.Error(), ShouldEqual, "GetAPIProfile failed: (apiRequest failed: User not found - (HTTP 204 No Content))")
 			So(apiProfile, ShouldResemble, APIProfileResponse{})
 		})
 
@@ -38,7 +38,7 @@ func TestProfiles(t *testing.T) {
 			apiProfile, err := GetAPIProfile("bad_string/")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "Error retrieving profile")
+			So(err.Error(), ShouldEqual, "GetAPIProfile failed: (apiRequest failed: Error retrieving profile - (HTTP 404 Not Found))")
 			So(apiProfile, ShouldResemble, APIProfileResponse{})
 		})
 
@@ -59,7 +59,7 @@ func TestProfiles(t *testing.T) {
 			sessionProfile, err := GetSessionProfile("bad_string/")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "Error retrieving profile")
+			So(err.Error(), ShouldEqual, "GetSessionProfile failed: (apiRequest failed: Error retrieving profile - (HTTP 404 Not Found))")
 			So(sessionProfile, ShouldResemble, SessionProfileResponse{})
 		})
 
@@ -102,7 +102,7 @@ func TestProfiles(t *testing.T) {
 			playerUUID, err := NormalizePlayerForUUID("skmkj88200aklk")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "User not found")
+			So(err.Error(), ShouldEqual, "GetAPIProfile failed: (apiRequest failed: User not found - (HTTP 204 No Content))")
 			So(playerUUID, ShouldBeBlank)
 		})
 
@@ -110,7 +110,7 @@ func TestProfiles(t *testing.T) {
 			playerUUID, err := NormalizePlayerForUUID("TooLongForAUsername")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "Invalid Username or UUID.")
+			So(err.Error(), ShouldEqual, "NormalizePlayerForUUID failed: Invalid Username or UUID.")
 			So(playerUUID, ShouldBeBlank)
 		})
 
@@ -125,7 +125,7 @@ func TestProfiles(t *testing.T) {
 			apiProfile, err := GetAPIProfile("RateLimitAPI")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "Rate limited")
+			So(err.Error(), ShouldEqual, "GetAPIProfile failed: (apiRequest failed: Rate limited)")
 			So(apiProfile, ShouldResemble, APIProfileResponse{})
 		})
 
@@ -133,7 +133,7 @@ func TestProfiles(t *testing.T) {
 			sessionProfile, err := GetSessionProfile("00000000000000000000000000000001")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "Rate limited")
+			So(err.Error(), ShouldEqual, "GetSessionProfile failed: (apiRequest failed: Rate limited)")
 			So(sessionProfile, ShouldResemble, SessionProfileResponse{})
 		})
 
@@ -148,7 +148,7 @@ func TestProfiles(t *testing.T) {
 			apiProfile, err := GetAPIProfile("MalformedAPI")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "Error decoding profile")
+			So(err.Error(), ShouldEqual, "GetAPIProfile failed: Error decoding profile - (unexpected EOF)")
 			So(apiProfile, ShouldResemble, APIProfileResponse{})
 		})
 
@@ -156,7 +156,7 @@ func TestProfiles(t *testing.T) {
 			sessionProfile, err := GetSessionProfile("00000000000000000000000000000003")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "Error decoding profile")
+			So(err.Error(), ShouldEqual, "GetSessionProfile failed: Error decoding profile - (unexpected EOF)")
 			So(sessionProfile, ShouldResemble, SessionProfileResponse{})
 		})
 

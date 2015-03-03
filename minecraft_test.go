@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	globalMux       *http.ServeMux
 	apiProfiles     map[string]string
 	sessionProfiles map[string]string
 	textures        map[string]string
@@ -124,6 +123,9 @@ func returnMux() *http.ServeMux {
 			case request == "citricsquid.png":
 				http.Redirect(w, r, textureURL+"e1c6c9b6de88f4188f9732909c76dfcd7b16a40a031ce1b4868e4d1f8898e4f", http.StatusMovedPermanently)
 				return
+			case request == "MalformedTexture.png":
+				http.Redirect(w, r, textureURL+"MalformedTexture", http.StatusMovedPermanently)
+				return
 			case request == "RLSessionMojang.png":
 				http.Redirect(w, r, textureURL+"cd9ca55e9862f003ebfa1872a9244ad5f721d6b9e6883dd1d42f87dae127649", http.StatusMovedPermanently)
 				return
@@ -138,6 +140,10 @@ func returnMux() *http.ServeMux {
 				return
 			case request == "citricsquid.png":
 				textureBytes, _ := base64.StdEncoding.DecodeString(textures["e1c6c9b6de88f4188f9732909c76dfcd7b16a40a031ce1b4868e4d1f8898e4f"])
+				w.Write(textureBytes)
+				return
+			case request == "MalformedTexture.png":
+				textureBytes, _ := base64.StdEncoding.DecodeString(textures["MalformedTexture"])
 				w.Write(textureBytes)
 				return
 			case request == "RLSessionS3.png":
@@ -193,6 +199,14 @@ func returnMux() *http.ServeMux {
 		w.WriteHeader(429)
 	})
 
+	mux.HandleFunc("/session/minecraft/profile/00000000000000000000000000000012", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(429)
+	})
+
+	mux.HandleFunc("/session/minecraft/profile/00000000000000000000000000000013", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(429)
+	})
+
 	mux.HandleFunc("/session/minecraft/profile/00000000000000000000000000000007", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 	})
@@ -218,97 +232,6 @@ func returnMux() *http.ServeMux {
 
 	return mux
 }
-
-/*
-
-func TestTemp1(t *testing.T) {
-	mux := returnMux()
-
-	mux.HandleFunc("/users/profiles/minecraft/samuel", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(204)
-	})
-
-	testServer := startTestServer(mux)
-	defer closeTestServer(testServer)
-
-	Convey("Test GetUUID", t, func() {
-
-		Convey("clone1018 should match d9135e082f2244c89cb0bee234155292", func() {
-			apiProfile, err := GetAPIProfile("clone1018")
-
-			So(err, ShouldBeNil)
-			So(apiProfile.UUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
-		})
-
-		Convey("5c115ca73efd41178213a0aff8ef11e0 should equal LukeHandle", func() {
-			// LukeHandle
-			sessionProfile, err := GetSessionProfile("5c115ca73efd41178213a0aff8ef11e0")
-
-			So(err, ShouldBeNil)
-			So(sessionProfile.Username, ShouldEqual, "LukeHandle")
-		})
-
-		Convey("d9135e082f2244c89cb0bee234155292 should return valid image from Mojang", func() {
-			// clone1018
-			skin, err := FetchSkinUUID("d9135e082f2244c89cb0bee234155292")
-
-			So(err, ShouldBeNil)
-			So(skin, ShouldNotResemble, Skin{})
-			So(skin.Hash, ShouldEqual, "a04a26d10218668a632e419ab073cf57")
-		})
-
-		Convey("48a0a7e4d5594873a617dc189f76a8a1 should return a Cape from Mojang", func() {
-			// citricsquid
-			cape, err := FetchCapeUUID("48a0a7e4d5594873a617dc189f76a8a1")
-
-			So(err, ShouldBeNil)
-			So(cape, ShouldNotResemble, Cape{Texture{Source: "SessionProfile"}})
-			So(cape.Hash, ShouldEqual, "8cbf8786caba2f05383cf887be592ee6")
-		})
-
-	})
-}
-
-
-func TestTemp2(t *testing.T) {
-	mux := returnMux()
-
-	mux.HandleFunc("/users/profiles/minecraft/samuel", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(204)
-	})
-
-	testServer := startTestServer(mux)
-	defer closeTestServer(testServer)
-
-	Convey("Test GetUUID", t, func() {
-
-		Convey("Test web request", func() {
-			resp, err := http.Get("sftp://google")
-			if err != nil {
-				os.Exit(1)
-			}
-			defer resp.Body.Close()
-
-			contents, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				fmt.Printf("%s", err)
-				os.Exit(1)
-			}
-
-			//base64 := base64.StdEncoding.EncodeToString(contents)
-
-			//fmt.Printf("Here (%s)\n", base64)
-
-			fmt.Printf("Here (%s)\n\n", contents)
-			fmt.Printf("resp: (%+v)\n", resp)
-
-			So(err, ShouldBeNil)
-		})
-
-	})
-}
-
-*/
 
 // RewriteTransport is an http.RoundTripper that rewrites requests
 // using the provided URL's Scheme and Host, and its Path as a prefix.
@@ -423,7 +346,7 @@ func TestExtra(t *testing.T) {
 			_, err := apiRequest("//")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "Unable to Get URL")
+			So(err.Error(), ShouldEqual, "apiRequest failed: Unable to Get URL - (Get : unsupported protocol scheme \"\")")
 		})
 
 		Convey("t.Fetch Bad URL", func() {
@@ -432,7 +355,7 @@ func TestExtra(t *testing.T) {
 			err := texture.Fetch()
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "Unable to Get URL")
+			So(err.Error(), ShouldEqual, "Fetch failed: Unable to Get URL - (Get : unsupported protocol scheme \"\")")
 		})
 
 	})

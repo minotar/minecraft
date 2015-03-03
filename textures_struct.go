@@ -54,8 +54,6 @@ func (t *Texture) FetchWithSessionProfile(sessionProfile SessionProfileResponse,
 		return errors.New("FetchWithSessionProfile failed: (" + err.Error() + ")")
 	}
 
-	t.Source = "SessionProfile"
-
 	err = t.FetchWithTextureProperty(profileTextureProperty, textureType)
 	if err != nil {
 		return errors.New("FetchWithSessionProfile failed: (" + err.Error() + ")")
@@ -64,12 +62,11 @@ func (t *Texture) FetchWithSessionProfile(sessionProfile SessionProfileResponse,
 }
 
 func (t *Texture) FetchWithTextureProperty(profileTextureProperty SessionProfileTextureProperty, textureType string) error {
-	t.Source = "SessionProfile"
-
 	url, err := DecodeTextureURL(profileTextureProperty, textureType)
 	if err != nil {
 		return errors.New("FetchWithTextureProperty failed: (" + err.Error() + ")")
 	}
+	t.Source = "SessionProfile"
 	t.URL = url
 
 	err = t.Fetch()

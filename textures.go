@@ -32,6 +32,8 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 	skin := Skin{}
 	cape := Cape{}
 
+	var catchErr error
+
 	// This function takes a Username/UUID and returns a UUID formatted without
 	// hyphens. Will error if it can't lookup Username (no account or API error) or
 	// if the Username/UUID regex fails
@@ -46,12 +48,18 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 			if err == nil {
 				// We got the skin and cape!
 				return user, skin, cape, nil
-			} else if strings.HasPrefix(err.Error(), "FetchTexturesWithSessionProfile failed: Unable to retrieve cape") {
-				// User likely has no cape - no worries :)
+			} else if err.Error() == "FetchTexturesWithSessionProfile failed: Unable to retrieve cape - (FetchWithTextureProperty failed: (DecodeTextureURL failed: Cape URL is not present.))" {
+				// User has no cape - no worries :)
 				return user, skin, cape, nil
+			} else if strings.HasPrefix(err.Error(), "FetchTexturesWithSessionProfile failed: Unable to retrieve cape - ") {
+				// User likely has no cape - no worries :)
+				return user, skin, cape, errors.New("FetchTextures unable to get the cape: (" + err.Error() + ")")
 			}
 			// Every other error means that we don't have a skin :(
 		}
+		catchErr = err
+	} else {
+		catchErr = uuidErr
 	}
 
 	if (uuidErr != nil && !strings.HasPrefix(uuidErr.Error(), "GetAPIProfile failed: (apiRequest failed: User not found") &&
@@ -66,13 +74,13 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 		skin, err := FetchSkinUsernameMojang(player)
 		if err == nil {
 			user.Username = player
-			return user, skin, cape, errors.New("FetchTextures fallback to UsernameMojang: (" + uuidErr.Error() + ")")
+			return user, skin, cape, errors.New("FetchTextures fallback to UsernameMojang: (" + catchErr.Error() + ")")
 		}
 
 		skin, err = FetchSkinUsernameS3(player)
 		if err == nil {
 			user.Username = player
-			return user, skin, cape, errors.New("FetchTextures fallback to UsernameS3: (" + uuidErr.Error() + ")")
+			return user, skin, cape, errors.New("FetchTextures fallback to UsernameS3: (" + catchErr.Error() + ")")
 		}
 	}
 
@@ -80,9 +88,9 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 	// Steve to the rescue!
 	skin, err := FetchSkinForSteve()
 	if err == nil {
-		err = errors.New("FetchTextures fallback to Steve: (" + uuidErr.Error() + ")")
+		err = errors.New("FetchTextures fallback to Steve: (" + catchErr.Error() + ")")
 	} else {
-		err = errors.New("FetchTextures failed to fallback:  (" + err.Error() + ") (" + uuidErr.Error() + ")")
+		err = errors.New("FetchTextures failed to fallback:  (" + err.Error() + ") (" + catchErr.Error() + ")")
 	}
 	return user, skin, cape, err
 }
