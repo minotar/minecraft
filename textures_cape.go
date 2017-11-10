@@ -1,6 +1,6 @@
 package minecraft
 
-import _ "image/png"
+import _ "image/png" // If we work with PNGs we need this
 
 type Cape struct {
 	Texture

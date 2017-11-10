@@ -5,9 +5,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
-	_ "image/png"
 	"strings"
+	// If we work with PNGs we need this
+	_ "image/png"
+
+	"github.com/pkg/errors"
 )
 
 type SessionProfileTextureProperty struct {
@@ -17,12 +19,63 @@ type SessionProfileTextureProperty struct {
 	IsPublic    bool   `json:"isPublic"`
 	Textures    struct {
 		Skin struct {
+			Metadata struct {
+				Model string `json:"model"`
+			} `json:"metadata"`
 			URL string `json:"url"`
 		} `json:"SKIN"`
 		Cape struct {
 			URL string `json:"url"`
 		} `json:"CAPE"`
 	} `json:"textures"`
+}
+
+// DecodeTextureProperty takes a SessionProfileResponse and breaks it down into the Skin/Cape URLs for downloading them
+func DecodeTextureProperty(sessionProfile SessionProfileResponse) (SessionProfileTextureProperty, error) {
+	var texturesProperty *SessionProfileProperty
+	for _, v := range sessionProfile.Properties {
+		if v.Name == "textures" {
+			texturesProperty = &v
+			break
+		}
+	}
+
+	// Is the below tested? Will it defintely be nil !! ??
+	if texturesProperty == nil {
+		return SessionProfileTextureProperty{}, errors.New("no textures property")
+	}
+
+	profileTextureProperty := SessionProfileTextureProperty{}
+	// Base64 decode the texturesProperty and further decode the JSON from it into profileTextureProperty
+	err := json.NewDecoder(base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(texturesProperty.Value))).Decode(&profileTextureProperty)
+
+	// If err is nil, errors.Wrap also returns nil
+	return profileTextureProperty, errors.Wrap(err, "unable to DecodeTextureProperty")
+}
+
+func FetchTexturesWithSessionProfile(sessionProfile SessionProfileResponse) (User, Skin, Cape, error) {
+	//  We have a sessionProfile!
+	user := &User{UUID: sessionProfile.UUID, Username: sessionProfile.Username}
+	skin := &Skin{}
+	cape := &Cape{}
+
+	profileTextureProperty, err := DecodeTextureProperty(sessionProfile)
+	if err != nil {
+		return *user, *skin, *cape, errors.Wrap(err, "failed to decode sessionProfile")
+	}
+
+	// We got oursleves a profileTextureProperty - now we can get a Skin/Cape
+
+	err = skin.FetchWithTextureProperty(profileTextureProperty, "Skin")
+	if err != nil {
+		return *user, *skin, *cape, errors.Wrap(err, "not able to retrieve skin")
+	}
+
+	err = cape.FetchWithTextureProperty(profileTextureProperty, "Cape")
+	if err != nil {
+		return *user, *skin, *cape, errors.Wrap(err, "not able to retrieve cape")
+	}
+	return *user, *skin, *cape, nil
 }
 
 // FetchTextures is our silver bullet/wrapper function to get both a Skin and Cape with a
@@ -48,12 +101,12 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 			if err == nil {
 				// We got the skin and cape!
 				return user, skin, cape, nil
-			} else if err.Error() == "FetchTexturesWithSessionProfile failed: Unable to retrieve cape - (FetchWithTextureProperty failed: (DecodeTextureURL failed: Cape URL is not present.))" {
+			} else if errors.Cause(err).Error() == "Cape URL not present" {
 				// User has no cape - no worries :)
 				return user, skin, cape, nil
-			} else if strings.HasPrefix(err.Error(), "FetchTexturesWithSessionProfile failed: Unable to retrieve cape - ") {
+			} else if strings.HasPrefix(err.Error(), "not able to retrieve cape") {
 				// User likely has no cape - no worries :)
-				return user, skin, cape, errors.New("FetchTextures unable to get the cape: (" + err.Error() + ")")
+				return user, skin, cape, errors.Wrap(err, "unable to get the cape")
 			}
 			// Every other error means that we don't have a skin :(
 		}
@@ -62,9 +115,9 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 		catchErr = uuidErr
 	}
 
-	if (uuidErr != nil && !strings.HasPrefix(uuidErr.Error(), "GetAPIProfile failed: (apiRequest failed: User not found") &&
-		uuidErr.Error() != "NormalizePlayerForUUID failed: Invalid Username or UUID.") ||
-		(uuidErr == nil && IsUsername(player)) {
+	if (uuidErr != nil && errors.Cause(uuidErr).Error() != "user not found" &&
+		uuidErr.Error() != "unable to NormalizePlayerForUUID due to invalid Username/UUID") ||
+		(uuidErr == nil && RegexUsername.MatchString(player)) {
 		// If the uuidErr is *not* "User not found" or related to a non username/UUID we
 		// know that there must have been another issue (and that the user potentially
 		// still exists... somewhere?)
@@ -74,13 +127,13 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 		skin, err := FetchSkinUsernameMojang(player)
 		if err == nil {
 			user.Username = player
-			return user, skin, cape, errors.New("FetchTextures fallback to UsernameMojang: (" + catchErr.Error() + ")")
+			return user, skin, cape, errors.Wrap(catchErr, "falling back to UsernameMojang")
 		}
 
 		skin, err = FetchSkinUsernameS3(player)
 		if err == nil {
 			user.Username = player
-			return user, skin, cape, errors.New("FetchTextures fallback to UsernameS3: (" + catchErr.Error() + ")")
+			return user, skin, cape, errors.Wrap(catchErr, "falling back to UsernameS3")
 		}
 	}
 
@@ -88,71 +141,9 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 	// Steve to the rescue!
 	skin, err := FetchSkinForSteve()
 	if err == nil {
-		err = errors.New("FetchTextures fallback to Steve: (" + catchErr.Error() + ")")
+		err = errors.Wrap(catchErr, "falling back to Steve")
 	} else {
-		err = errors.New("FetchTextures failed to fallback:  (" + err.Error() + ") (" + catchErr.Error() + ")")
+		err = errors.Wrap(err, "failed to fallback to Steve")
 	}
 	return user, skin, cape, err
-}
-
-func FetchTexturesWithSessionProfile(sessionProfile SessionProfileResponse) (User, Skin, Cape, error) {
-	//  We have a sessionProfile!
-	user := &User{UUID: sessionProfile.UUID, Username: sessionProfile.Username}
-	skin := &Skin{}
-	cape := &Cape{}
-
-	profileTextureProperty, err := DecodeTextureProperty(sessionProfile)
-	if err != nil {
-		return *user, *skin, *cape, errors.New("FetchTexturesWithSessionProfile failed: Unable to decode sessionProfile (" + err.Error() + ")")
-	}
-
-	// We got oursleves a profileTextureProperty - now we can get a Skin/Cape
-
-	err = skin.FetchWithTextureProperty(profileTextureProperty, "Skin")
-	if err != nil {
-		return *user, *skin, *cape, errors.New("FetchTexturesWithSessionProfile failed: Unable to retrieve skin - (" + err.Error() + ")")
-	}
-
-	err = cape.FetchWithTextureProperty(profileTextureProperty, "Cape")
-	if err != nil {
-		return *user, *skin, *cape, errors.New("FetchTexturesWithSessionProfile failed: Unable to retrieve cape - (" + err.Error() + ")")
-	}
-	return *user, *skin, *cape, nil
-}
-
-func DecodeTextureProperty(sessionProfile SessionProfileResponse) (SessionProfileTextureProperty, error) {
-	var texturesProperty *SessionProfileProperty
-	for _, v := range sessionProfile.Properties {
-		if v.Name == "textures" {
-			texturesProperty = &v
-			break
-		}
-	}
-
-	if texturesProperty == nil {
-		return SessionProfileTextureProperty{}, errors.New("DecodeTextureProperty failed: No textures property.")
-	}
-
-	profileTextureProperty := SessionProfileTextureProperty{}
-	err := json.NewDecoder(base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(texturesProperty.Value))).Decode(&profileTextureProperty)
-	if err != nil {
-		return SessionProfileTextureProperty{}, errors.New("DecodeTextureProperty failed: Error decoding texture property - (" + err.Error() + ")")
-	}
-
-	return profileTextureProperty, nil
-}
-
-// DecodeTextureURL will return a texture URL string when supplied with a
-// SessionProfileTextureProperty and a type (Skin|Cape).
-func DecodeTextureURL(profileTextureProperty SessionProfileTextureProperty, textureType string) (string, error) {
-	textureURL := profileTextureProperty.Textures.Skin.URL
-	if textureType != "Skin" {
-		textureURL = profileTextureProperty.Textures.Cape.URL
-	}
-
-	if textureURL == "" {
-		return "", errors.New("DecodeTextureURL failed: " + textureType + " URL is not present.")
-	}
-
-	return textureURL, nil
 }

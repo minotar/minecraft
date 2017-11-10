@@ -302,35 +302,35 @@ func TestRegexs(t *testing.T) {
 
 		Convey("Username regex works", func() {
 			for _, validUsername := range validUsernames {
-				So(IsUsername(validUsername), ShouldBeTrue)
+				So(RegexUsername.MatchString(validUsername), ShouldBeTrue)
 			}
 
 			for _, invalidUsername := range invalidUsernames {
-				So(IsUsername(invalidUsername), ShouldBeFalse)
+				So(RegexUsername.MatchString(invalidUsername), ShouldBeFalse)
 			}
 		})
 
 		Convey("UUID regex works", func() {
 			for _, validUUID := range validUUIDs {
-				So(IsUUID(validUUID), ShouldBeTrue)
+				So(RegexUUID.MatchString(validUUID), ShouldBeTrue)
 			}
 
 			for _, invalidUUID := range invalidUUIDs {
-				So(IsUUID(invalidUUID), ShouldBeFalse)
+				So(RegexUUID.MatchString(invalidUUID), ShouldBeFalse)
 			}
 		})
 
 		Convey("Username-or-UUID regex works", func() {
 			for _, validThing := range validUsernamesOrUUIDs {
-				So(IsUsernameOrUUID(validThing), ShouldBeTrue)
+				So(RegexUsernameOrUUID.MatchString(validThing), ShouldBeTrue)
 			}
 
 			for _, possiblyInvalidThing := range possiblyInvalidUsernamesOrUUIDs {
-				resultOne := IsUsername(possiblyInvalidThing)
-				resultTwo := IsUUID(possiblyInvalidThing)
+				resultOne := RegexUsername.MatchString(possiblyInvalidThing)
+				resultTwo := RegexUUID.MatchString(possiblyInvalidThing)
 				expectedResult := resultOne || resultTwo
 
-				So(IsUsernameOrUUID(possiblyInvalidThing), ShouldEqual, expectedResult)
+				So(RegexUsernameOrUUID.MatchString(possiblyInvalidThing), ShouldEqual, expectedResult)
 			}
 		})
 
@@ -343,19 +343,19 @@ func TestExtra(t *testing.T) {
 	Convey("Test bad GET requests", t, func() {
 
 		Convey("apiRequest Bad URL", func() {
-			_, err := apiRequest("//")
+			_, err := apiRequest("//dummy_url")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "apiRequest failed: Unable to Get URL - (Get : unsupported protocol scheme \"\")")
+			So(err.Error(), ShouldEqual, "unable to request URL: Get //dummy_url: unsupported protocol scheme \"\"")
 		})
 
 		Convey("t.Fetch Bad URL", func() {
-			texture := &Texture{URL: "//"}
+			texture := &Texture{URL: "//dummy_url"}
 
 			err := texture.Fetch()
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "Fetch failed: Unable to Get URL - (Get : unsupported protocol scheme \"\")")
+			So(err.Error(), ShouldEqual, "unable to Fetch Texture: unable to request URL: Get //dummy_url: unsupported protocol scheme \"\"")
 		})
 
 	})

@@ -1,9 +1,6 @@
 package minecraft
 
-import (
-	"errors"
-	_ "image/png"
-)
+import _ "image/png" // If we work with PNGs we need this
 
 type Skin struct {
 	Texture
@@ -24,17 +21,7 @@ func FetchSkinUUID(uuid string) (Skin, error) {
 func FetchSkinUsernameMojang(username string) (Skin, error) {
 	skin := &Skin{}
 
-	err := skin.FetchWithUsernameMojang(username, "Skin")
-	if err != nil {
-		return *skin, err
-	}
-
-	// Some proper testing is really required to determine if this is truly needed.
-	if skin.Hash == SteveHash {
-		return Skin{Texture{Source: "Steve"}}, errors.New("FetchSkinUsernameMojang failed: Rate limited")
-	}
-
-	return *skin, nil
+	return *skin, skin.FetchWithUsernameMojang(username, "Skin")
 }
 
 func FetchSkinUsernameS3(username string) (Skin, error) {
