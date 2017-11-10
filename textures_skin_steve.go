@@ -3,24 +3,26 @@ package minecraft
 import (
 	"bytes"
 	"encoding/base64"
-	"errors"
 	"image"
+	// If we work with PNGs we need this
 	_ "image/png"
+
+	"github.com/pkg/errors"
 )
 
 const SteveHash = "98903c1609352e11552dca79eb1ce3d6"
 
-func (s *Skin) fetchSteve() error {
+func (s *Skin) FetchSteve() error {
 	bytes, err := GetSteveBytes()
 	if err != nil {
-		return errors.New("fetchSteve failed: (" + err.Error() + ")")
+		return err
 	}
 
 	s.Source = "Steve"
 
-	err = s.decode(bytes)
+	err = s.Decode(bytes)
 	if err != nil {
-		return errors.New("fetchSteve failed: (" + err.Error() + ")")
+		return errors.Wrap(err, "failed to decode Steve skin")
 	}
 
 	return nil
@@ -29,7 +31,7 @@ func (s *Skin) fetchSteve() error {
 func GetSteveBytes() (*bytes.Buffer, error) {
 	steveImgBytes, err := base64.StdEncoding.DecodeString(SteveBase64)
 	if err != nil {
-		return bytes.NewBuffer([]byte{}), errors.New("GetSteveBytes failed: (" + err.Error() + ")")
+		return bytes.NewBuffer([]byte{}), errors.Wrap(err, "failed to GetSteveBytes")
 	}
 
 	return bytes.NewBuffer(steveImgBytes), nil
@@ -38,20 +40,20 @@ func GetSteveBytes() (*bytes.Buffer, error) {
 func FetchImageForSteve() (image.Image, error) {
 	bytes, err := GetSteveBytes()
 	if err != nil {
-		return nil, errors.New("FetchImageForSteve failed: (" + err.Error() + ")")
+		return nil, err
 	}
 
 	img, _, err := image.Decode(bytes)
 	if err != nil {
-		return nil, errors.New("FetchImageForSteve failed: (" + err.Error() + ")")
+		return nil, errors.Wrap(err, "failed to decode Steve image")
 	}
 	return img, nil
 }
 
-func FetchSkinForSteve() (*Skin, error) {
+func FetchSkinForSteve() (Skin, error) {
 	skin := &Skin{}
 
-	return skin, skin.fetchSteve()
+	return *skin, skin.FetchSteve()
 }
 
 // The constant below contains Mojang AB copyrighted content.

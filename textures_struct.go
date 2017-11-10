@@ -2,14 +2,14 @@ package minecraft
 
 import (
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"image"
 	"image/draw"
-	"net/http"
+	"io"
 	// If we work with PNGs we need this
 	_ "image/png"
-	"io"
+
+	"github.com/pkg/errors"
 )
 
 // Texture is our structure for the Cape/Skin structs and the functions for dealing with it
@@ -26,94 +26,31 @@ type Texture struct {
 	URL string
 }
 
-func (t *Texture) fetch() error {
-	if t.URL == "" {
-		return errors.New("fetch failed: No Texture URL")
-	}
-
-	resp, err := http.Get(t.URL)
+// CastToNRGBA takes image bytes and converts to NRGBA format if needed
+func (t *Texture) CastToNRGBA(r io.Reader) error {
+	// Decode the skin
+	textureImg, format, err := image.Decode(r)
 	if err != nil {
-		return errors.New("fetch failed: Unable to Get URL - (" + err.Error() + ")")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("fetch failed: Error retrieving texture - (HTTP " + resp.Status + ")")
+		return errors.Wrap(err, "unable to CastToNRGBA")
 	}
 
-	err = t.decode(resp.Body)
-	if err != nil {
-		return errors.New("fetch failed: (" + err.Error() + ")")
+	// Convert it to NRGBA if necessary
+	textureFinal := textureImg
+	if format != "NRGBA" {
+		bounds := textureImg.Bounds()
+		textureFinal = image.NewNRGBA(bounds)
+		draw.Draw(textureFinal.(draw.Image), bounds, textureImg, image.Pt(0, 0), draw.Src)
 	}
+
+	t.Image = textureFinal
 	return nil
 }
 
-func (t *Texture) fetchWithSessionProfile(sessionProfile SessionProfileResponse, textureType string) error {
-	profileTextureProperty, err := decodeTextureProperty(sessionProfile)
+// Decode takes the image bytes and turns it into our Texture struct
+func (t *Texture) Decode(r io.Reader) error {
+	err := t.CastToNRGBA(r)
 	if err != nil {
-		return errors.New("fetchWithSessionProfile failed: (" + err.Error() + ")")
-	}
-
-	t.Source = "SessionProfile"
-
-	url, err := decodeTextureURL(profileTextureProperty, textureType)
-	if err != nil {
-		return errors.New("fetchWithSessionProfile failed: (" + err.Error() + ")")
-	}
-	t.URL = url
-
-	err = t.fetch()
-	if err != nil {
-		return errors.New("fetchWithSessionProfile failed: (" + err.Error() + ")")
-	}
-	return nil
-}
-
-// Includes the Skin not found detection that Mojang uses
-func (t *Texture) fetchWithUsernameMojang(username string, textureType string) error {
-	t.URL = "http://skins.minecraft.net/MinecraftSkins/" + username + ".png"
-	if textureType != "Skin" {
-		t.URL = "http://skins.minecraft.net/MinecraftCloaks/" + username + ".png"
-	}
-
-	t.Source = "Mojang"
-
-	err := t.fetch()
-	if err != nil {
-		if err.Error() == "fetch failed: Error retrieving texture - (HTTP 404 Not Found)" {
-			return errors.New("fetchWithUsernameMojang failed:  Texture not found - (" + err.Error() + ")")
-		}
-		return errors.New("fetchWithUsernameMojang failed:  (" + err.Error() + ")")
-	}
-
-	return nil
-}
-
-// Includes the Skin not found detection that S3 uses
-func (t *Texture) fetchWithUsernameS3(username string, textureType string) error {
-	t.URL = "http://s3.amazonaws.com/MinecraftSkins/" + username + ".png"
-	if textureType != "Skin" {
-		t.URL = "http://s3.amazonaws.com/MinecraftCloaks/" + username + ".png"
-	}
-
-	t.Source = "S3"
-
-	err := t.fetch()
-	if err != nil {
-		if err.Error() == "fetch failed: Error retrieving texture - (HTTP 403 Forbidden)" {
-			return errors.New("fetchWithUsernameS3 failed: Texture not found - (" + err.Error() + ")")
-		}
-		return errors.New("fetchWithUsernameS3 failed:  (" + err.Error() + ")")
-	}
-
-	return nil
-}
-
-// decode takes the image bytes and turns it into our Texture struct
-func (t *Texture) decode(r io.Reader) error {
-	err := t.castToNRGBA(r)
-	if err != nil {
-		return errors.New("decode failed: Error casting to NRGBA - (" + err.Error() + ")")
+		return errors.WithStack(err)
 	}
 
 	// And md5 hash its pixels
@@ -133,21 +70,69 @@ func (t *Texture) decode(r io.Reader) error {
 	return nil
 }
 
-func (t *Texture) castToNRGBA(r io.Reader) error {
-	// Decode the skin
-	textureImg, format, err := image.Decode(r)
+// Fetch performs the GET for the texture, doing any required conversion and saving our Image property
+func (t *Texture) Fetch() error {
+	apiBody, err := apiRequest(t.URL)
+	if apiBody != nil {
+		defer apiBody.Close()
+	}
 	if err != nil {
-		return errors.New("castToNRGBA failed: (" + err.Error() + ")")
+		return errors.Wrap(err, "unable to Fetch Texture")
 	}
 
-	// Convert it to NRGBA if necessary
-	textureFinal := textureImg
-	if format != "NRGBA" {
-		bounds := textureImg.Bounds()
-		textureFinal = image.NewNRGBA(bounds)
-		draw.Draw(textureFinal.(draw.Image), bounds, textureImg, image.Pt(0, 0), draw.Src)
+	err = t.Decode(apiBody)
+	if err != nil {
+		return errors.Wrap(err, "unable to Decode Texture")
 	}
-
-	t.Image = textureFinal
 	return nil
+}
+
+// FetchWithTextureProperty takes a already decoded Texture Property and will request either Skin or Cape as instructed
+func (t *Texture) FetchWithTextureProperty(profileTextureProperty SessionProfileTextureProperty, textureType string) error {
+	if textureType == "Skin" {
+		t.URL = profileTextureProperty.Textures.Skin.URL
+	} else {
+		t.URL = profileTextureProperty.Textures.Cape.URL
+	}
+	if t.URL == "" {
+		return errors.Errorf("%s URL not present", textureType)
+	}
+	t.Source = "SessionProfile"
+
+	return errors.Wrap(t.Fetch(), "FetchWithTextureProperty failed")
+}
+
+// FetchWithSessionProfile will decode the Texture Property for you and request the Skin or Cape as instructed
+// If requesting both Skin and Cape, this would result in 2 x decoding - useFetchWithTextureProperty instead
+func (t *Texture) FetchWithSessionProfile(sessionProfile SessionProfileResponse, textureType string) error {
+	profileTextureProperty, err := DecodeTextureProperty(sessionProfile)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return t.FetchWithTextureProperty(profileTextureProperty, textureType)
+}
+
+// FetchWithUsernameMojang takes a username and will then request from the deprecated (but still updated) Mojang source
+func (t *Texture) FetchWithUsernameMojang(username string, textureType string) error {
+	if textureType == "Skin" {
+		t.URL = "http://skins.minecraft.net/MinecraftSkins/" + username + ".png"
+	} else {
+		t.URL = "http://skins.minecraft.net/MinecraftCloaks/" + username + ".png"
+	}
+	t.Source = "Mojang"
+
+	return errors.Wrap(t.Fetch(), "FetchWithUsernameMojang failed")
+}
+
+// FetchWithUsernameS3 uses the deprecated and stale S3 store for the Skin or Cape (truly last resort)
+func (t *Texture) FetchWithUsernameS3(username string, textureType string) error {
+	if textureType == "Skin" {
+		t.URL = "http://s3.amazonaws.com/MinecraftSkins/" + username + ".png"
+	} else {
+		t.URL = "http://s3.amazonaws.com/MinecraftCloaks/" + username + ".png"
+	}
+	t.Source = "S3"
+
+	return errors.Wrap(t.Fetch(), "FetchWithUsernameS3 failed")
 }
