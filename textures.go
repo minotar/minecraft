@@ -1,4 +1,3 @@
-// Minecraft Textures
 package minecraft
 
 import (
@@ -48,9 +47,11 @@ func DecodeTextureProperty(sessionProfile SessionProfileResponse) (SessionProfil
 	profileTextureProperty := SessionProfileTextureProperty{}
 	// Base64 decode the texturesProperty and further decode the JSON from it into profileTextureProperty
 	err := json.NewDecoder(base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(texturesProperty.Value))).Decode(&profileTextureProperty)
+	if err != nil {
+		return SessionProfileTextureProperty{}, errors.Wrap(err, "unable to DecodeTextureProperty")
+	}
 
-	// If err is nil, errors.Wrap also returns nil
-	return profileTextureProperty, errors.Wrap(err, "unable to DecodeTextureProperty")
+	return profileTextureProperty, nil
 }
 
 func FetchTexturesWithSessionProfile(sessionProfile SessionProfileResponse) (User, Skin, Cape, error) {
@@ -87,14 +88,16 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 
 	var catchErr error
 
-	// This function takes a Username/UUID and returns a UUID formatted without
+	// NormalizePlayerForUUID takes a Username/UUID and returns a UUID formatted without
 	// hyphens. Will error if it can't lookup Username (no account or API error) or
 	// if the Username/UUID regex fails
 	uuid, uuidErr := NormalizePlayerForUUID(player)
+
 	if uuidErr == nil {
 		// We should have a valid UUID which *hopefully* corresponds to a user.
 		// Must be careful to not request same profile from session server more than once per ~30 seconds
 		sessionProfile, err := GetSessionProfile(uuid)
+
 		if err == nil {
 			// We got a sessionProfile (so UUID must be for a user)
 			user, skin, cape, err = FetchTexturesWithSessionProfile(sessionProfile)
@@ -130,6 +133,7 @@ func FetchTextures(player string) (User, Skin, Cape, error) {
 			return user, skin, cape, errors.Wrap(catchErr, "falling back to UsernameMojang")
 		}
 
+		// A last ditch effort to recall an old skin from S3
 		skin, err = FetchSkinUsernameS3(player)
 		if err == nil {
 			user.Username = player
