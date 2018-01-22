@@ -103,7 +103,7 @@ func (t *Texture) FetchWithTextureProperty(profileTextureProperty SessionProfile
 }
 
 // FetchWithSessionProfile will decode the Texture Property for you and request the Skin or Cape as instructed
-// If requesting both Skin and Cape, this would result in 2 x decoding - useFetchWithTextureProperty instead
+// If requesting both Skin and Cape, this would result in 2 x decoding - use FetchWithTextureProperty instead
 func (t *Texture) FetchWithSessionProfile(sessionProfile SessionProfileResponse, textureType string) error {
 	profileTextureProperty, err := DecodeTextureProperty(sessionProfile)
 	if err != nil {
