@@ -32,11 +32,11 @@ type SessionProfileProperty struct {
 // GetAPIProfile returns the API profile for a given username primarily of use
 // for getting the UUID, but can also correct the capitilzation of a username or
 // possibly get the account status (legacy or demo) - only included when true
-func GetAPIProfile(username string) (APIProfileResponse, error) {
-	url := "https://api.mojang.com/users/profiles/minecraft/"
+func (mc *Minecraft) GetAPIProfile(username string) (APIProfileResponse, error) {
+	url := mc.UUIDAPI.ProfileURL
 	url += username
 
-	apiBody, err := apiRequest(url)
+	apiBody, err := mc.apiRequest(url)
 	if apiBody != nil {
 		defer apiBody.Close()
 	}
@@ -54,16 +54,16 @@ func GetAPIProfile(username string) (APIProfileResponse, error) {
 }
 
 // GetUUID returns the UUID for a given username (shorthand for GetAPIProfile)
-func GetUUID(username string) (string, error) {
-	apiProfile, err := GetAPIProfile(username)
+func (mc *Minecraft) GetUUID(username string) (string, error) {
+	apiProfile, err := mc.GetAPIProfile(username)
 	return apiProfile.UUID, err
 }
 
 // NormalizePlayerForUUID takes either a Username or UUID and returns a UUID
 // formatted without dashes, or an error (eg. no account or an API error)
-func NormalizePlayerForUUID(player string) (string, error) {
+func (mc *Minecraft) NormalizePlayerForUUID(player string) (string, error) {
 	if RegexUsername.MatchString(player) {
-		return GetUUID(player)
+		return mc.GetUUID(player)
 	} else if RegexUUID.MatchString(player) {
 		return strings.Replace(player, "-", "", 4), nil
 	}
@@ -75,11 +75,11 @@ func NormalizePlayerForUUID(player string) (string, error) {
 // GetSessionProfile fetches the session profile of the UUID, this includes
 // extra properties for the user (currently just a textures property)
 // Rate limits if performing same request within 30 seconds
-func GetSessionProfile(uuid string) (SessionProfileResponse, error) {
-	url := "https://sessionserver.mojang.com/session/minecraft/profile/"
+func (mc *Minecraft) GetSessionProfile(uuid string) (SessionProfileResponse, error) {
+	url := mc.UUIDAPI.SessionServerURL
 	url += uuid
 
-	apiBody, err := apiRequest(url)
+	apiBody, err := mc.apiRequest(url)
 	if apiBody != nil {
 		defer apiBody.Close()
 	}

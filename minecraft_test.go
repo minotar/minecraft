@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -19,10 +20,13 @@ var (
 	apiProfiles     map[string]string
 	sessionProfiles map[string]string
 	textures        map[string]string
+	testURL         string
+	mcTest          *Minecraft
+	mcProd          *Minecraft
 )
 
 // Add test data to our maps
-func TestSetup(t *testing.T) {
+func createMaps() {
 
 	apiProfiles = map[string]string{
 		"clone1018":        `{"id":"d9135e082f2244c89cb0bee234155292","name":"clone1018"}`,
@@ -110,81 +114,44 @@ func returnMux() *http.ServeMux {
 		}
 	})
 
-	// MinecraftSkins
-	mux.HandleFunc("/MinecraftSkins/", func(w http.ResponseWriter, r *http.Request) {
-		request := strings.TrimPrefix(r.URL.Path, "/MinecraftSkins/")
+	// skins
+	mux.HandleFunc("/skins/", func(w http.ResponseWriter, r *http.Request) {
+		request := strings.TrimPrefix(r.URL.Path, "/skins/")
 
-		if r.Host == "skins.minecraft.net" {
-			textureURL := "http://textures.minecraft.net/texture/"
-			switch {
-			case request == "clone1018.png":
-				http.Redirect(w, r, textureURL+"cd9ca55e9862f003ebfa1872a9244ad5f721d6b9e6883dd1d42f87dae127649", http.StatusMovedPermanently)
-				return
-			case request == "citricsquid.png":
-				http.Redirect(w, r, textureURL+"e1c6c9b6de88f4188f9732909c76dfcd7b16a40a031ce1b4868e4d1f8898e4f", http.StatusMovedPermanently)
-				return
-			case request == "MalformedTexture.png":
-				http.Redirect(w, r, textureURL+"MalformedTexture", http.StatusMovedPermanently)
-				return
-			case request == "RLSessionMojang.png":
-				http.Redirect(w, r, textureURL+"cd9ca55e9862f003ebfa1872a9244ad5f721d6b9e6883dd1d42f87dae127649", http.StatusMovedPermanently)
-				return
-			}
-			w.WriteHeader(404)
-			fmt.Fprintf(w, "404 Not Found")
-		} else if r.Host == "s3.amazonaws.com" {
-			switch {
-			case request == "clone1018.png":
+		if r.Host == "skins.example.net" {
+			switch request {
+			case "clone1018.png":
 				textureBytes, _ := base64.StdEncoding.DecodeString(textures["cd9ca55e9862f003ebfa1872a9244ad5f721d6b9e6883dd1d42f87dae127649"])
 				w.Write(textureBytes)
 				return
-			case request == "citricsquid.png":
+			case "citricsquid.png":
 				textureBytes, _ := base64.StdEncoding.DecodeString(textures["e1c6c9b6de88f4188f9732909c76dfcd7b16a40a031ce1b4868e4d1f8898e4f"])
 				w.Write(textureBytes)
 				return
-			case request == "MalformedTexture.png":
+			case "MalformedTexture.png":
 				textureBytes, _ := base64.StdEncoding.DecodeString(textures["MalformedTexture"])
 				w.Write(textureBytes)
 				return
-			case request == "RLSessionS3.png":
-				textureBytes, _ := base64.StdEncoding.DecodeString(textures["e1c6c9b6de88f4188f9732909c76dfcd7b16a40a031ce1b4868e4d1f8898e4f"])
-				w.Write(textureBytes)
-				return
 			}
-			w.WriteHeader(403)
-			fmt.Fprintf(w, "403 Forbidden")
-		} else {
-			w.WriteHeader(404)
-			fmt.Fprintf(w, "404 Not Found (%s)", r.Host)
 		}
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "404 Not Found (%s)", r.Host)
 	})
 
-	// MinecraftCloaks
-	mux.HandleFunc("/MinecraftCloaks/", func(w http.ResponseWriter, r *http.Request) {
-		request := strings.TrimPrefix(r.URL.Path, "/MinecraftCloaks/")
+	// capes
+	mux.HandleFunc("/capes/", func(w http.ResponseWriter, r *http.Request) {
+		request := strings.TrimPrefix(r.URL.Path, "/capes/")
 
-		if r.Host == "skins.minecraft.net" {
-			textureURL := "http://textures.minecraft.net/texture/"
-			switch {
-			case request == "citricsquid.png":
-				http.Redirect(w, r, textureURL+"c3af7fb821254664558f28361158ca73303c9a85e96e5251102958d7ed60c4a3", http.StatusMovedPermanently)
-				return
-			}
-			w.WriteHeader(404)
-			fmt.Fprintf(w, "404 Not Found")
-		} else if r.Host == "s3.amazonaws.com" {
-			switch {
-			case request == "citricsquid.png":
+		if r.Host == "skins.example.net" {
+			switch request {
+			case "citricsquid.png":
 				textureBytes, _ := base64.StdEncoding.DecodeString(textures["c3af7fb821254664558f28361158ca73303c9a85e96e5251102958d7ed60c4a3"])
 				w.Write(textureBytes)
 				return
 			}
-			w.WriteHeader(403)
-			fmt.Fprintf(w, "403 Forbidden")
-		} else {
-			w.WriteHeader(404)
-			fmt.Fprintf(w, "404 Not Found")
 		}
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "404 Not Found (%s)", r.Host)
 	})
 
 	mux.HandleFunc("/users/profiles/minecraft/RateLimitAPI", func(w http.ResponseWriter, r *http.Request) {
@@ -255,24 +222,36 @@ func (t RewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return rt.RoundTrip(req)
 }
 
-func startTestServer(mux *http.ServeMux) *httptest.Server {
+func setup(mux *http.ServeMux) *httptest.Server {
+	createMaps()
 	testServer := httptest.NewServer(mux)
 
-	u, err := url.Parse(testServer.URL)
+	testURL = testServer.URL
+
+	u, err := url.Parse(testURL)
 	if err != nil {
 		log.Fatalln("failed to parse httptest.Server URL:", err)
 	}
-	http.DefaultClient.Transport = RewriteTransport{URL: u}
+
+	mcTest = NewMinecraft()
+	mcTest.Client = &http.Client{Transport: RewriteTransport{URL: u}}
+	mcTest.UsernameAPI.SkinURL = "http://skins.example.net/skins/"
+	mcTest.UsernameAPI.CapeURL = "http://skins.example.net/capes/"
+	mcProd = NewMinecraft()
 
 	return testServer
 }
 
-func closeTestServer(testServer *httptest.Server) {
+func shutdown(testServer *httptest.Server) {
 	testServer.Close()
-
-	http.DefaultClient = &http.Client{}
-
 	return
+}
+
+func TestMain(m *testing.M) {
+	state := setup(returnMux())
+	code := m.Run()
+	shutdown(state)
+	os.Exit(code)
 }
 
 func TestRegexs(t *testing.T) {
@@ -342,20 +321,27 @@ func TestExtra(t *testing.T) {
 
 	Convey("Test bad GET requests", t, func() {
 
-		Convey("apiRequest Bad URL", func() {
-			_, err := apiRequest("//dummy_url")
+		Convey("apiRequest Bad Request", func() {
+			_, err := mcProd.apiRequest("::")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "unable to request URL: Get //dummy_url: unsupported protocol scheme \"\"")
+			So(err.Error(), ShouldEqual, "unable to create request: parse ::: missing protocol scheme")
 		})
 
-		Convey("t.Fetch Bad URL", func() {
-			texture := &Texture{URL: "//dummy_url"}
+		Convey("apiRequest Bad GET", func() {
+			_, err := mcProd.apiRequest("//dummy_url")
+
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "unable to GET URL: Get //dummy_url: unsupported protocol scheme \"\"")
+		})
+
+		Convey("t.Fetch Bad GET", func() {
+			texture := &Texture{URL: "//dummy_url", Mc: mcProd}
 
 			err := texture.Fetch()
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "unable to Fetch Texture: unable to request URL: Get //dummy_url: unsupported protocol scheme \"\"")
+			So(err.Error(), ShouldEqual, "unable to Fetch Texture: unable to GET URL: Get //dummy_url: unsupported protocol scheme \"\"")
 		})
 
 	})

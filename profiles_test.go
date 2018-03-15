@@ -13,21 +13,21 @@ func TestProfiles(t *testing.T) {
 	Convey("Test GetAPIProfile", t, func() {
 
 		Convey("clone1018 should match d9135e082f2244c89cb0bee234155292", func() {
-			apiProfile, err := GetAPIProfile("clone1018")
+			apiProfile, err := mcProd.GetAPIProfile("clone1018")
 
 			So(err, ShouldBeNil)
 			So(apiProfile.UUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
 		})
 
 		Convey("CLone1018 should equal clone1018", func() {
-			apiProfile, err := GetAPIProfile("CLone1018")
+			apiProfile, err := mcProd.GetAPIProfile("CLone1018")
 
 			So(err, ShouldBeNil)
 			So(apiProfile.Username, ShouldEqual, "clone1018")
 		})
 
 		Convey("skmkj88200aklk should gracefully error", func() {
-			apiProfile, err := GetAPIProfile("skmkj88200aklk")
+			apiProfile, err := mcProd.GetAPIProfile("skmkj88200aklk")
 
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "unable to GetAPIProfile: user not found")
@@ -35,7 +35,7 @@ func TestProfiles(t *testing.T) {
 		})
 
 		Convey("bad_string/ should cause an HTTP error", func() {
-			apiProfile, err := GetAPIProfile("bad_string/")
+			apiProfile, err := mcProd.GetAPIProfile("bad_string/")
 
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "unable to GetAPIProfile: apiRequest HTTP 404 Not Found")
@@ -49,14 +49,14 @@ func TestProfiles(t *testing.T) {
 
 		Convey("5c115ca73efd41178213a0aff8ef11e0 should equal LukeHandle", func() {
 			// LukeHandle
-			sessionProfile, err := GetSessionProfile("5c115ca73efd41178213a0aff8ef11e0")
+			sessionProfile, err := mcProd.GetSessionProfile("5c115ca73efd41178213a0aff8ef11e0")
 
 			So(err, ShouldBeNil)
 			So(sessionProfile.Username, ShouldEqual, "LukeHandle")
 		})
 
 		Convey("bad_string/ should cause an HTTP error", func() {
-			sessionProfile, err := GetSessionProfile("bad_string/")
+			sessionProfile, err := mcProd.GetSessionProfile("bad_string/")
 
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "unable to GetSessionProfile: apiRequest HTTP 404 Not Found")
@@ -71,35 +71,35 @@ func TestProfiles(t *testing.T) {
 	Convey("Test NormalizePlayerForUUID", t, func() {
 
 		Convey("clone1018 should match d9135e082f2244c89cb0bee234155292", func() {
-			playerUUID, err := NormalizePlayerForUUID("clone1018")
+			playerUUID, err := mcProd.NormalizePlayerForUUID("clone1018")
 
 			So(err, ShouldBeNil)
 			So(playerUUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
 		})
 
 		Convey("CLone1018 should match d9135e082f2244c89cb0bee234155292", func() {
-			playerUUID, err := NormalizePlayerForUUID("clone1018")
+			playerUUID, err := mcProd.NormalizePlayerForUUID("clone1018")
 
 			So(err, ShouldBeNil)
 			So(playerUUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
 		})
 
 		Convey("d9135e08-2f22-44c8-9cb0-bee234155292 should match d9135e082f2244c89cb0bee234155292", func() {
-			playerUUID, err := NormalizePlayerForUUID("d9135e082f2244c89cb0bee234155292")
+			playerUUID, err := mcProd.NormalizePlayerForUUID("d9135e082f2244c89cb0bee234155292")
 
 			So(err, ShouldBeNil)
 			So(playerUUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
 		})
 
 		Convey("d9135e082f2244c89cb0bee234155292 should match d9135e082f2244c89cb0bee234155292", func() {
-			playerUUID, err := NormalizePlayerForUUID("d9135e082f2244c89cb0bee234155292")
+			playerUUID, err := mcProd.NormalizePlayerForUUID("d9135e082f2244c89cb0bee234155292")
 
 			So(err, ShouldBeNil)
 			So(playerUUID, ShouldEqual, "d9135e082f2244c89cb0bee234155292")
 		})
 
 		Convey("skmkj88200aklk should gracefully error", func() {
-			playerUUID, err := NormalizePlayerForUUID("skmkj88200aklk")
+			playerUUID, err := mcProd.NormalizePlayerForUUID("skmkj88200aklk")
 
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "unable to GetAPIProfile: user not found")
@@ -107,7 +107,7 @@ func TestProfiles(t *testing.T) {
 		})
 
 		Convey("TooLongForAUsername should gracefully error", func() {
-			playerUUID, err := NormalizePlayerForUUID("TooLongForAUsername")
+			playerUUID, err := mcProd.NormalizePlayerForUUID("TooLongForAUsername")
 
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "unable to NormalizePlayerForUUID due to invalid Username/UUID")
@@ -118,11 +118,8 @@ func TestProfiles(t *testing.T) {
 
 	Convey("Test Profile Rate Limit detection", t, func() {
 
-		testServer := startTestServer(returnMux())
-		defer closeTestServer(testServer)
-
 		Convey("GetAPIProfile should detect Rate Limit", func() {
-			apiProfile, err := GetAPIProfile("RateLimitAPI")
+			apiProfile, err := mcTest.GetAPIProfile("RateLimitAPI")
 
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "unable to GetAPIProfile: rate limited")
@@ -130,7 +127,7 @@ func TestProfiles(t *testing.T) {
 		})
 
 		Convey("GetSessionProfile should detect Rate Limit", func() {
-			sessionProfile, err := GetSessionProfile("00000000000000000000000000000001")
+			sessionProfile, err := mcTest.GetSessionProfile("00000000000000000000000000000001")
 
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "unable to GetSessionProfile: rate limited")
@@ -141,11 +138,8 @@ func TestProfiles(t *testing.T) {
 
 	Convey("Test Profile Bad JSON", t, func() {
 
-		testServer := startTestServer(returnMux())
-		defer closeTestServer(testServer)
-
 		Convey("GetAPIProfile should error decoding", func() {
-			apiProfile, err := GetAPIProfile("MalformedAPI")
+			apiProfile, err := mcTest.GetAPIProfile("MalformedAPI")
 
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "decoding GetAPIProfile failed: unexpected EOF")
@@ -153,7 +147,7 @@ func TestProfiles(t *testing.T) {
 		})
 
 		Convey("GetSessionProfile should error decoding", func() {
-			sessionProfile, err := GetSessionProfile("00000000000000000000000000000003")
+			sessionProfile, err := mcTest.GetSessionProfile("00000000000000000000000000000003")
 
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "decoding GetSessionProfile failed: unexpected EOF")
