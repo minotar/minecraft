@@ -6,11 +6,11 @@ type Skin struct {
 	Texture
 }
 
-func FetchSkinUUID(uuid string) (Skin, error) {
-	skin := &Skin{}
+func (mc *Minecraft) FetchSkinUUID(uuid string) (Skin, error) {
+	skin := &Skin{Texture{Mc: mc}}
 
 	// Must be careful to not request same profile from session server more than once per ~30 seconds
-	sessionProfile, err := GetSessionProfile(uuid)
+	sessionProfile, err := mc.GetSessionProfile(uuid)
 	if err != nil {
 		return *skin, err
 	}
@@ -18,14 +18,8 @@ func FetchSkinUUID(uuid string) (Skin, error) {
 	return *skin, skin.FetchWithSessionProfile(sessionProfile, "Skin")
 }
 
-func FetchSkinUsernameMojang(username string) (Skin, error) {
-	skin := &Skin{}
+func (mc *Minecraft) FetchSkinUsername(username string) (Skin, error) {
+	skin := &Skin{Texture{Mc: mc}}
 
-	return *skin, skin.FetchWithUsernameMojang(username, "Skin")
-}
-
-func FetchSkinUsernameS3(username string) (Skin, error) {
-	skin := &Skin{}
-
-	return *skin, skin.FetchWithUsernameS3(username, "Skin")
+	return *skin, skin.FetchWithUsername(username, "Skin")
 }
