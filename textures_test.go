@@ -4,6 +4,7 @@ package minecraft
 import (
 	"testing"
 
+	"github.com/minotar/minecraft/mockminecraft"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -23,7 +24,7 @@ func TestTextures(t *testing.T) {
 		Convey("Bad texture requests should gracefully fail", func() {
 
 			Convey("Bad texture URL (invalid-image)", func() {
-				texture := &Texture{Mc: mcTest, URL: testURL + "/texture/MalformedTexture"}
+				texture := &Texture{Mc: mcTest, URL: mockminecraft.TestURL + "/texture/MalformedTexture"}
 
 				err := texture.Fetch()
 
@@ -32,7 +33,7 @@ func TestTextures(t *testing.T) {
 			})
 
 			Convey("Bad texture URL (non-image)", func() {
-				texture := &Texture{Mc: mcTest, URL: testURL + "/200"}
+				texture := &Texture{Mc: mcTest, URL: mockminecraft.TestURL + "/200"}
 
 				err := texture.Fetch()
 
@@ -41,7 +42,7 @@ func TestTextures(t *testing.T) {
 			})
 
 			Convey("Bad texture URL (non-200)", func() {
-				texture := &Texture{Mc: mcTest, URL: testURL + "/404"}
+				texture := &Texture{Mc: mcTest, URL: mockminecraft.TestURL + "/404"}
 
 				err := texture.Fetch()
 
@@ -113,7 +114,7 @@ func TestTextures(t *testing.T) {
 			profileTextureProperty, err := DecodeTextureProperty(sessionProfile)
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "no textures property")
+			So(err.Error(), ShouldEqual, "unable to DecodeTextureProperty: no textures property")
 			So(profileTextureProperty, ShouldResemble, SessionProfileTextureProperty{})
 		})
 
@@ -178,7 +179,7 @@ func TestTextures(t *testing.T) {
 			err := skin.FetchWithSessionProfile(sessionProfile, "Skin")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "no textures property")
+			So(err.Error(), ShouldEqual, "unable to DecodeTextureProperty: no textures property")
 		})
 
 		Convey("Should error trying to decode", func() {
@@ -372,7 +373,7 @@ func TestTextures(t *testing.T) {
 			user, skin, cape, err := mcTest.FetchTexturesWithSessionProfile(sessionProfile)
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "failed to decode sessionProfile: no textures property")
+			So(err.Error(), ShouldEqual, "failed to decode sessionProfile: unable to DecodeTextureProperty: no textures property")
 			So(user.Username, ShouldEqual, "NoTexture")
 			So(skin, ShouldResemble, Skin{Texture{Mc: mcTest}})
 			So(cape, ShouldResemble, Cape{Texture{Mc: mcTest}})

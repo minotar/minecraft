@@ -39,7 +39,7 @@ func DecodeTextureProperty(sessionProfile SessionProfileResponse) (SessionProfil
 	}
 
 	if texturesProperty == nil {
-		return SessionProfileTextureProperty{}, errors.New("no textures property")
+		return SessionProfileTextureProperty{}, errors.New("unable to DecodeTextureProperty: no textures property")
 	}
 
 	profileTextureProperty := SessionProfileTextureProperty{}
