@@ -137,7 +137,7 @@ func TestVariableChanging(t *testing.T) {
 
 	APIProfiles["mockminecraft_test"] = `{"id":"10000000000000000000000000000000","name":"mockminecraft_test"}`
 	SessionProfiles["10000000000000000000000000000000"] = `eyJ0aW1lc3RhbXAiOjAsInByb2ZpbGVJZCI6IjEwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIiwicHJvZmlsZU5hbWUiOiJtb2NrbWluZWNyYWZ0X3Rlc3QiLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvbW9ja21pbmVjcmFmdF90ZXN0In19fQ==`
-	Textures["mockminecraft_test"] = `iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGP6DwABBQECz6AuzQAAAABJRU5ErkJggg==`
+	Textures["/texture/mockminecraft_test"] = `iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGP6DwABBQECz6AuzQAAAABJRU5ErkJggg==`
 
 	Convey("Test 200 after adding to Maps", t, func() {
 
