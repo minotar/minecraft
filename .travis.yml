@@ -1,9 +1,8 @@
 language: go
 
 go:
-  - 1.6
-  - 1.8
-  - tip
+  - "1.10"
+  - "tip"
 
 install:
   - go get github.com/smartystreets/goconvey/convey

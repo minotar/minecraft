@@ -14,8 +14,14 @@ const (
 	// ValidUsernameRegex is proper Minecraft username regex
 	ValidUsernameRegex = `[a-zA-Z0-9_]{1,16}`
 
+	// ValidUUIDPlainRegex is proper Minecraft UUID regex
+	ValidUUIDPlainRegex = `[0-9a-f]{32}`
+
+	// ValidUUIDDashRegex is proper Minecraft UUID regex
+	ValidUUIDDashRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
+
 	// ValidUUIDRegex is proper Minecraft UUID regex
-	ValidUUIDRegex = `[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
+	ValidUUIDRegex = "(" + ValidUUIDPlainRegex + "|" + ValidUUIDDashRegex + ")"
 
 	// ValidUsernameOrUUIDRegex is proper Minecraft Username-or-UUID regex
 	ValidUsernameOrUUIDRegex = "(" + ValidUUIDRegex + "|" + ValidUsernameRegex + ")"
@@ -24,6 +30,12 @@ const (
 var (
 	// RegexUsername is our compiled once Username matching Regex
 	RegexUsername = regexp.MustCompile("^" + ValidUsernameRegex + "$")
+
+	// RegexUUIDPlain is our compiled once PLAIN UUID matching Regex
+	RegexUUIDPlain = regexp.MustCompile("^" + ValidUUIDPlainRegex + "$")
+
+	// RegexUUID is our compiled once DASHED UUID matching Regex
+	RegexUUIDDash = regexp.MustCompile("^" + ValidUUIDDashRegex + "$")
 
 	// RegexUUID is our compiled once UUID matching Regex
 	RegexUUID = regexp.MustCompile("^" + ValidUUIDRegex + "$")

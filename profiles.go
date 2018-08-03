@@ -19,8 +19,7 @@ type APIProfileResponse struct {
 }
 
 type SessionProfileResponse struct {
-	UUID       string                   `json:"id"`
-	Username   string                   `json:"name"`
+	User
 	Properties []SessionProfileProperty `json:"properties"`
 }
 
